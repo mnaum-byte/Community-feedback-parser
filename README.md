@@ -18,6 +18,14 @@ Environment variables:
 - `THREADS_CONCURRENCY` - default 2 (parallel comment extraction across threads)
 - `COMMENTS_PAGE_CONCURRENCY` - default 3 (parallel pages per thread)
 
+Deploy (single-origin on Render/Railway):
+
+1) Connect this repo as a Web/Service with Start command: `npm run start`. Node 18+.
+2) Set env vars: `SESSION_SECRET`, `HTTP_TIMEOUT_MS` (e.g., 20000), optional `OPENAI_API_KEY`, and concurrency knobs above.
+3) Domain: add your custom domain and enable HTTPS.
+4) Browser extension: set backend URL to your domain and click "Sync cookie".
+5) Production is configured for secure cookies behind HTTPS (trust proxy enabled).
+
 Browser extensions (cookie sync):
 
 - Chromium (Chrome/Edge/Brave/Arc): load `extensions/chromium` as an unpacked extension. Open a tab at `https://adobeexpress.uservoice.com`, ensure you are signed in, click the extension, then "Sync cookie". The backend will store and probe the cookie and the app will show "Signed in".

@@ -14,11 +14,16 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+// Trust proxy for correct secure cookies behind reverse proxies (Render/Railway)
+app.set('trust proxy', 1);
 app.use(session({
 	secret: process.env.SESSION_SECRET || 'uv-secret',
 	resave: false,
 	saveUninitialized: true,
-	cookie: { secure: false },
+	cookie: { 
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'lax'
+	},
 }));
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
