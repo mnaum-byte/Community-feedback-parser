@@ -13,7 +13,19 @@ const { nanoid } = require('nanoid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Allow CORS for extension origins (and optionally any origin for auth endpoints)
+app.use(cors({
+    origin: function(origin, cb) {
+        // Allow requests with no origin (like curl) or our extension origins
+        if (!origin) return cb(null, true);
+        if (/^chrome-extension:/.test(origin) || /^moz-extension:/.test(origin)) return cb(null, true);
+        if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) return cb(null, true);
+        // Also allow our own origin
+        if (origin && process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) return cb(null, true);
+        return cb(null, true); // be permissive for now; lock down later
+    },
+    credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 // Trust proxy for correct secure cookies behind reverse proxies (Render/Railway)
 app.set('trust proxy', 1);

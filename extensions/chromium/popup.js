@@ -26,7 +26,9 @@ async function postCookie(backend, cookie) {
 }
 
 document.getElementById('btn-sync').addEventListener('click', async () => {
-  const backend = document.getElementById('backend').value.trim() || 'http://localhost:3000';
+  let backend = document.getElementById('backend').value.trim() || 'http://localhost:3000';
+  // sanitize: remove trailing slash or dot
+  backend = backend.replace(/\/$/, '').replace(/\.$/, '');
   const status = document.getElementById('status');
   status.textContent = 'Collecting cookies...';
   try {
