@@ -45,6 +45,12 @@ document.getElementById('btn-sync').addEventListener('click', async () => {
       status.textContent = `Uploaded, but not authenticated (${data.reason || 'unknown'}).`;
       status.className = 'hint error';
     }
+
+    // If server returned a one-time adoption token, open adoption URL to attach cookie to UI session
+    if (data.token) {
+      const adoptUrl = backend.replace(/\/$/, '') + '/auth/adopt?token=' + encodeURIComponent(data.token);
+      try { chrome.tabs.create({ url: adoptUrl }); } catch (_) {}
+    }
   } catch (e) {
     status.textContent = 'Failed to sync: ' + e.message;
     status.className = 'hint error';
