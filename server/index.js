@@ -8,6 +8,7 @@ const { jobManager } = require('./jobs');
 const { findRelevantThreads, extractRelevantComments } = require('./scrape');
 const { prepareQueryContext } = require('./matcher');
 const { createClient } = require('./request');
+const { nanoid } = require('nanoid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,13 +46,35 @@ app.get('/health', (req, res) => {
 	res.json({ ok: true });
 });
 
+// One-time token store to adopt cookies from extension to current UI session
+const adoptTokens = new Map(); // token -> { cookie, expiresAt }
+const ADOPT_TTL_MS = 2 * 60 * 1000;
+
+// Called by the browser extension. Returns a one-time token for adoption.
 app.post('/auth/upload', async (req, res) => {
 	const { cookie } = req.body || {};
 	if (!cookie || typeof cookie !== 'string') return res.status(400).json({ ok: false, error: 'cookie string required' });
-	req.session.uservoiceCookie = cookie.trim();
+	const trimmed = cookie.trim();
+	const probe = await probeCookie(trimmed);
+	const token = nanoid();
+	adoptTokens.set(token, { cookie: trimmed, expiresAt: Date.now() + ADOPT_TTL_MS });
+	res.json({ ok: true, authenticated: probe.authenticated, reason: probe.reason, token });
+});
+
+// UI calls this (or the extension opens it) to attach the uploaded cookie to this browser session
+app.get('/auth/adopt', async (req, res) => {
+	const { token } = req.query || {};
+	if (!token || typeof token !== 'string') return res.status(400).send('Missing token');
+	const entry = adoptTokens.get(token);
+	if (!entry) return res.status(410).send('Token expired');
+	if (Date.now() > entry.expiresAt) {
+		adoptTokens.delete(token);
+		return res.status(410).send('Token expired');
+	}
+	req.session.uservoiceCookie = entry.cookie;
 	try { req.session.save(() => {}); } catch (e) {}
-	const probe = await probeCookie(req.session.uservoiceCookie);
-	res.json({ ok: true, authenticated: probe.authenticated, reason: probe.reason });
+	adoptTokens.delete(token);
+	res.redirect('/');
 });
 
 app.get('/auth/status', async (req, res) => {

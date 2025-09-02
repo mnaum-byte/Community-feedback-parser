@@ -46,11 +46,19 @@
         .badge { padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); font-size: 12px; color: var(--muted); }
         .badge.ok { color: #6de39b; border-color: #1f3a2b; background: #0e1f16; }
         .note { font-size: 12px; color: var(--muted); }
+        .envbar { display:flex; gap:12px; align-items:center; justify-content:flex-end; margin-bottom:8px; }
+        .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); color: var(--muted); }
+        .chip.prod { color:#6de39b; border-color:#1f3a2b; background:#0e1f16; }
     </style>
  </head>
  <body>
    <div class="container">
    <h1>UserVoice feedback extractor for Adobe Express</h1>
+   <div class="envbar">
+     <span id="env-chip" class="chip">env</span>
+     <span id="backend-chip" class="chip">backend</span>
+     <a id="logs-link" class="chip" href="#" target="_blank" rel="noopener" style="display:none;">Logs</a>
+   </div>
    <div class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">https://adobeexpress.uservoice.com/forums/951181-adobe-express</a> )</div>
    <div class="section panel">
      <div class="auth">
@@ -128,6 +136,23 @@
      let relevantThreads = [];
      let threadRowCount = 0;
      let isAuthed = false;
+
+     // Production chip and backend info
+     (function setEnvChips(){
+       const isProd = window.location.hostname !== 'localhost';
+       const envChip = el('env-chip');
+       const backendChip = el('backend-chip');
+       const logsLink = el('logs-link');
+       envChip.textContent = isProd ? 'production' : 'local';
+       if (isProd) envChip.className = 'chip prod';
+       backendChip.textContent = window.location.origin;
+       // If hosted on Render, show logs link
+       if (/onrender\.com$/.test(window.location.hostname)) {
+         logsLink.href = window.location.origin + '/health';
+         logsLink.style.display = 'inline-block';
+         logsLink.textContent = 'Health';
+       }
+     })();
 
      async function refreshAuth() {
        try {
