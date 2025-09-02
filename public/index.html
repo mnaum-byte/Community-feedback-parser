@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%234f8cff'/%3E%3C/svg%3E" />
+    <title>UserVoice feedback extractor for Adobe Express</title>
+    <style>
+        :root {
+            --bg: #0b0d10;
+            --panel: #12151a;
+            --muted: #8a93a6;
+            --text: #e4e7ec;
+            --border: #242a34;
+            --accent: #4f8cff;
+            --danger: #ff5c79;
+        }
+        html, body { height: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; color: var(--text); background: radial-gradient(1200px 800px at 50% -20%, #141924 0%, var(--bg) 50%); }
+        .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+        h1 { font-size: 22px; margin: 0 0 8px 0; }
+        .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .row-col { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; }
+        label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+        input, textarea { width: 100%; max-width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: #0f1319; }
+        textarea { min-height: 72px; }
+        button { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+        button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .hint { font-size: 12px; color: var(--muted); }
+        .section { margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px; font-size: 14px; vertical-align: top; }
+        th { color: var(--muted); font-weight: 600; background: #141923; }
+        .status { margin-top: 10px; font-size: 13px; color: var(--muted); }
+        .status.error { color: var(--danger); }
+        .loader { display: none; margin-left: 8px; }
+        .progress { font-size: 12px; color: var(--muted); }
+        .controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+        .controls label { display: inline; margin: 0 6px 0 0; }
+        .auth { display: flex; gap: 8px; align-items: center; }
+        .badge { padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); font-size: 12px; color: var(--muted); }
+        .badge.ok { color: #6de39b; border-color: #1f3a2b; background: #0e1f16; }
+        .note { font-size: 12px; color: var(--muted); }
+    </style>
+ </head>
+ <body>
+   <div class="container">
+   <h1>UserVoice feedback extractor for Adobe Express</h1>
+   <div class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">https://adobeexpress.uservoice.com/forums/951181-adobe-express</a> )</div>
+   <div class="section panel">
+     <div class="auth">
+       <button id="btn-auth" class="secondary">Sign in to UserVoice</button>
+       <span id="auth-status" class="badge">Checking auth...</span>
+     </div>
+     <div class="row-col" style="margin-top:12px;">
+       <div>
+         <label>Must-have keywords (comma separated)</label>
+         <input id="mustKeywords" placeholder="e.g. brand kit, styles, logo" />
+         <div class="hint">All of these should be present (strict)</div>
+       </div>
+       <div>
+         <label>Optional keywords (comma separated)</label>
+         <input id="optionalKeywords" placeholder="e.g. pdf, export, caption" />
+         <div class="hint">Any of these helps (broad)</div>
+       </div>
+       <div>
+         <label>Excluded keywords (comma separated)</label>
+         <input id="excludeKeywords" placeholder="e.g. animation, video" />
+         <div class="hint">Items containing any will be excluded</div>
+       </div>
+       <div>
+         <label>Feature definition (1-3 sentences)</label>
+         <textarea id="featureDef" placeholder="Describe the functionality/flow you care about..."></textarea>
+         <div class="hint">Used for semantic matching</div>
+       </div>
+       <div>
+         <label>Browser Cookie (optional if signed in)</label>
+         <textarea id="cookie" placeholder="Paste cookie only if not signed in"></textarea>
+         <div class="hint">Server session cookie is used if signed in</div>
+       </div>
+     </div>
+     <div class="controls">
+       <label><input type="checkbox" id="useSynonyms" checked /> Expand with synonyms</label>
+       <label><input type="checkbox" id="useSemantic" /> Use semantic matching</label>
+     </div>
+     <div class="row" style="margin-top:10px; gap:8px;">
+       <button id="btn-parse">Parse Forum</button>
+       <span id="parse-loader" class="loader">⏳</span>
+       <span id="parse-progress" class="progress"></span>
+       <span id="parse-status" class="status"></span>
+     </div>
+   </div>
+
+   <div class="section panel">
+     <h2>Relevant Threads</h2>
+     <table>
+       <thead>
+         <tr><th>#</th><th>Title</th><th>URL</th><th>Why</th></tr>
+       </thead>
+       <tbody id="threads-body"></tbody>
+     </table>
+     <div class="row" style="margin-top:10px; gap:8px;">
+       <button id="btn-extract" class="secondary">Extract user comments</button>
+       <span id="comments-loader" class="loader">⏳</span>
+       <span id="comments-progress" class="progress"></span>
+       <span id="comments-status" class="status"></span>
+     </div>
+   </div>
+
+   <div class="section panel">
+     <h2>User comments</h2>
+     <table>
+       <thead>
+         <tr><th>Comment</th><th>Thread</th><th>Direct URL</th><th>Why</th></tr>
+       </thead>
+       <tbody id="comments-body"></tbody>
+     </table>
+   </div>
+   </div>
+
+   <script>
+     const el = (id) => document.getElementById(id);
+     let relevantThreads = [];
+     let threadRowCount = 0;
+     let isAuthed = false;
+
+     async function refreshAuth() {
+       try {
+         const res = await fetch('/auth/status');
+         const data = await res.json();
+         isAuthed = !!data.authenticated;
+         el('auth-status').textContent = isAuthed ? 'Signed in' : 'Not signed in';
+         el('auth-status').className = isAuthed ? 'badge ok' : 'badge';
+       } catch (_) {
+         el('auth-status').textContent = 'Unknown';
+         el('auth-status').className = 'badge';
+       }
+     }
+
+     function csvToArray(value) {
+       return (value || '').split(',').map(s => s.trim()).filter(Boolean);
+     }
+
+     function buildQueryPayload() {
+       return {
+         cookie: isAuthed ? '' : el('cookie').value.trim(),
+         query: {
+           must: csvToArray(el('mustKeywords').value),
+           optional: csvToArray(el('optionalKeywords').value),
+           exclude: csvToArray(el('excludeKeywords').value),
+           featureDef: el('featureDef').value.trim(),
+           useSynonyms: el('useSynonyms').checked,
+           useSemantic: el('useSemantic').checked
+         }
+       };
+     }
+
+     function renderThread(row) {
+       const tr = document.createElement('tr');
+       tr.dataset.threadUrl = row.url;
+       const tdIdx = document.createElement('td');
+       const tdTitle = document.createElement('td');
+       const tdUrl = document.createElement('td');
+       const tdWhy = document.createElement('td');
+       tdIdx.textContent = String(++threadRowCount);
+       tdTitle.textContent = row.title;
+       const a = document.createElement('a');
+       a.href = row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Thread URL';
+       tdUrl.appendChild(a);
+       tdWhy.textContent = row._why || '';
+       tr.appendChild(tdIdx); tr.appendChild(tdTitle); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
+       el('threads-body').appendChild(tr);
+     }
+
+     function markThreadNote(threadUrl, note) {
+       const rows = el('threads-body').querySelectorAll('tr');
+       for (const r of rows) {
+         if (r.dataset.threadUrl === threadUrl) {
+           let cell = r.querySelector('td.note-cell');
+           if (!cell) {
+             cell = document.createElement('td');
+             cell.className = 'note-cell';
+             r.appendChild(cell);
+           }
+           cell.textContent = note;
+           cell.className = 'note-cell note';
+           break;
+         }
+       }
+     }
+
+     function renderComment(row) {
+       const tr = document.createElement('tr');
+       const tdBody = document.createElement('td');
+       const tdThread = document.createElement('td');
+       const tdUrl = document.createElement('td');
+       const tdWhy = document.createElement('td');
+       tdBody.textContent = row.body;
+       tdThread.textContent = row.threadTitle;
+       const a = document.createElement('a'); a.href = row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = row.url; tdUrl.appendChild(a);
+       tdWhy.textContent = row._why || '';
+       tr.appendChild(tdBody); tr.appendChild(tdThread); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
+       el('comments-body').appendChild(tr);
+     }
+
+     async function startParse() {
+       el('threads-body').innerHTML = '';
+       el('parse-status').textContent = '';
+       el('parse-progress').textContent = '';
+       relevantThreads = [];
+       threadRowCount = 0;
+       const payload = buildQueryPayload();
+       if (!isAuthed && !payload.cookie) { el('parse-status').textContent = 'Sign in or provide cookie'; el('parse-status').className = 'status error'; return; }
+       const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
+       if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
+       el('parse-loader').style.display = 'inline';
+       try {
+         const res = await fetch('/api/parse/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+         const { jobId, error } = await res.json();
+         if (!res.ok) throw new Error(error || 'Failed to start parse job');
+         const sse = new EventSource(`/api/parse/events/${jobId}`);
+         sse.addEventListener('connected', () => { el('parse-status').textContent = 'Connected'; el('parse-status').className = 'status'; });
+         sse.addEventListener('thread', (ev) => { const row = JSON.parse(ev.data); relevantThreads.push(row); renderThread(row); });
+         sse.addEventListener('progress', (ev) => {
+           const p = JSON.parse(ev.data);
+           if (p.phase === 'discover') {
+             el('parse-progress').textContent = `Discovering pages: ${p.discoveredPages || p.pageIndex}`;
+             return;
+           }
+           const percent = (p.totalThreads && p.scannedThreads != null) ? Math.floor((p.scannedThreads / Math.max(1, p.totalThreads)) * 100) : null;
+           const pctText = percent != null ? ` | ${percent}% complete (${p.scannedThreads}/${p.totalThreads})` : '';
+           const pagesText = (p.pageIndex && p.totalPages) ? ` | Pages: ${p.pageIndex}/${p.totalPages}` : (p.pageIndex ? ` | Pages: ${p.pageIndex}` : '');
+           el('parse-progress').textContent = `Relevant: ${p.totalRelevant || 0}${pctText}${pagesText}`;
+         });
+         sse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; sse.close(); el('parse-loader').style.display = 'none'; });
+         sse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; sse.close(); el('parse-loader').style.display = 'none'; });
+       } catch (e) { el('parse-status').textContent = e.message; el('parse-status').className = 'status error'; el('parse-loader').style.display = 'none'; }
+     }
+
+     async function startExtract() {
+       el('comments-body').innerHTML = '';
+       el('comments-status').textContent = '';
+       el('comments-progress').textContent = '';
+       const payload = buildQueryPayload();
+       if (!isAuthed && !payload.cookie) { el('comments-status').textContent = 'Sign in or provide cookie'; el('comments-status').className = 'status error'; return; }
+       if (relevantThreads.length === 0) { el('comments-status').textContent = 'Run Parse Forum first'; el('comments-status').className = 'status error'; return; }
+       el('comments-loader').style.display = 'inline';
+       try {
+         const res = await fetch('/api/comments/start', { 
+           method: 'POST', 
+           headers: { 'Content-Type': 'application/json' }, 
+           body: JSON.stringify({ ...payload, threads: relevantThreads }) 
+         });
+         const { jobId, error } = await res.json();
+         if (!res.ok) throw new Error(error || 'Failed to start comments job');
+         const sse = new EventSource(`/api/comments/events/${jobId}`);
+         sse.addEventListener('connected', () => { 
+           el('comments-status').textContent = 'Connected'; 
+           el('comments-status').className = 'status'; 
+         });
+         sse.addEventListener('comment', (ev) => { 
+           const row = JSON.parse(ev.data); 
+           renderComment(row); 
+         });
+         sse.addEventListener('threadNoComments', (ev) => { 
+           const d = JSON.parse(ev.data); 
+           markThreadNote(d.threadUrl, 'No comments'); 
+         });
+         sse.addEventListener('threadNoMatches', (ev) => { const d = JSON.parse(ev.data); markThreadNote(d.threadUrl, 'No matches'); });
+         sse.addEventListener('progress', (ev) => { const p = JSON.parse(ev.data); el('comments-progress').textContent = `Threads: ${p.threadIndex} | Relevant: ${p.totalRelevant}`; });
+         sse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; sse.close(); el('comments-loader').style.display = 'none'; });
+         sse.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; sse.close(); el('comments-loader').style.display = 'none'; });
+       } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; }
+     }
+
+     function openAuth() {
+       // Open proxied forum page; user clicks Sign in there; session cookies are captured
+       window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
+       setTimeout(refreshAuth, 3000);
+     }
+
+     el('btn-auth').addEventListener('click', openAuth);
+     el('btn-parse').addEventListener('click', startParse);
+     el('btn-extract').addEventListener('click', startExtract);
+     refreshAuth();
+   </script>
+ </body>
+ </html>
+

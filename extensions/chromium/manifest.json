@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "UserVoice Cookie Sync",
+  "version": "1.0.0",
+  "description": "Sync your adobeexpress.uservoice.com login cookie to the extractor backend.",
+  "permissions": [
+    "cookies",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://adobeexpress.uservoice.com/*",
+    "https://*.uservoice.com/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_title": "UserVoice Cookie Sync",
+    "default_popup": "popup.html"
+  }
+}
+
+
