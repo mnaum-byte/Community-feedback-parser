@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: community-feedback-parser
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HTTP_TIMEOUT_MS
+        value: 20000
+      - key: FORUM_CONCURRENCY
+        value: 3
+      - key: THREADS_CONCURRENCY
+        value: 2
+      - key: COMMENTS_PAGE_CONCURRENCY
+        value: 3
+      - key: SESSION_SECRET
+        generateValue: true
+
