@@ -344,10 +344,13 @@
          if (modalRoot) modalRoot.classList.add('compact');
          if (modalFooter) modalFooter.style.display = 'flex';
          modalBody.innerHTML = '';
-         Array.from(section.children).forEach(child => { child.style.display = ''; });
-         const frag = document.createDocumentFragment();
-         Array.from(section.children).forEach(child => frag.appendChild(child));
-         modalBody.appendChild(frag);
+         // Create a container panel inside the modal for the filters UI
+         const wrap = document.createElement('div');
+         wrap.id = 'filters-modal-wrapper';
+         wrap.className = 'panel';
+         wrap.style.margin = '0';
+         Array.from(section.children).forEach(child => { child.style.display = ''; wrap.appendChild(child); });
+         modalBody.appendChild(wrap);
        } else {
          modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
          if (modalRoot) modalRoot.classList.remove('compact');
@@ -369,8 +372,11 @@
        if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
        if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
        if (sidebar && filtersSec && modalCurrent === 'filters') {
-         while (modalBody.firstChild) filtersSec.appendChild(modalBody.firstChild);
-         filtersSec.style.display = 'none';
+        const wrap = document.getElementById('filters-modal-wrapper');
+        const container = wrap || modalBody;
+        while (container.firstChild) filtersSec.appendChild(container.firstChild);
+        if (wrap) wrap.remove();
+        filtersSec.style.display = 'none';
        }
        modalOverlay.classList.remove('open');
        modalOverlay.setAttribute('aria-hidden', 'true');
