@@ -44,12 +44,8 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Serve XLSX bundle locally for reliable exports on localhost
 try {
     const xlsxPath = require.resolve('xlsx/dist/xlsx.full.min.js');
-    app.get('/vendor/xlsx.full.min.js', (req, res) => {
-        res.sendFile(xlsxPath);
-    });
-    // Also expose the entire dist folder in case other assets are needed
     const xlsxDistDir = path.dirname(xlsxPath);
-    app.use('/vendor', express.static(xlsxDistDir));
+    app.use('/vendor', express.static(xlsxDistDir, { extensions: ['js','map'] }));
 } catch (_) {}
 
 async function probeCookie(uservoiceCookie) {
@@ -144,6 +140,8 @@ app.use('/auth/proxy', createProxyMiddleware({
 	changeOrigin: true,
 	ws: false,
 	followRedirects: true,
+
+	
 	pathRewrite: { '^/auth/proxy': '' },
 	onProxyRes: (proxyRes, req, res) => {
 		const loc = proxyRes.headers['location'];

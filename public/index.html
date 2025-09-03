@@ -474,8 +474,9 @@
          // Prefer local vendor route, then CDNs
          const fallbacks = [
            '/vendor/xlsx.full.min.js',
-           'https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js',
-           'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.19.3/xlsx.full.min.js'
+           'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+           'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+           'https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js'
          ];
          xlsxLoading = (async () => {
            for (const url of fallbacks) {
