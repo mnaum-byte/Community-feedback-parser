@@ -129,6 +129,8 @@
           /* Ensure a larger default width */
           width: 1200px !important;
           max-width: 98vw !important;
+          min-width: 960px !important;
+          min-height: 60vh !important;
         }
         /* Medium (wider) container for filters */
         md-dialog.medium::part(container) {
@@ -482,6 +484,7 @@
           ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = document.getElementById(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
         }
         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
+        if (modalBody) { modalBody.style.minWidth = '960px'; modalBody.style.minHeight = 'auto'; }
       } else {
         mdDialog?.classList.remove('medium');
         mdDialog?.classList.add('wide');
@@ -491,6 +494,7 @@
         modalBody.innerHTML = '';
         const section = document.getElementById(sectionId);
         if (section) modalBody.appendChild(section);
+        if (modalBody) { modalBody.style.minWidth = '1200px'; modalBody.style.minHeight = '70vh'; }
       }
       try { if (mdDialog && typeof mdDialog.show === 'function') { mdDialog.show(); } else if (mdDialog) { mdDialog.open = true; } } catch(_) { if (mdDialog) mdDialog.open = true; }
     }
