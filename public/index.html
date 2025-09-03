@@ -125,9 +125,23 @@
         /* md-dialog sizing per M3 patterns */
         md-dialog::part(container) { background: var(--panel); border: 1px solid var(--border); }
         /* Medium (wider) container for filters */
-        md-dialog.medium::part(container) { width: min(800px, 96vw); max-height: 82vh; }
+        md-dialog.medium::part(container) {
+          width: 1200px !important;
+          max-width: 98vw !important;
+          inline-size: 1200px !important;
+          max-inline-size: 98vw !important;
+          max-height: 94vh !important;
+          height: auto !important;
+        }
         /* Wide container for results */
-        md-dialog.wide::part(container) { width: min(1280px, 96vw); height: 90vh; max-height: 90vh; }
+        md-dialog.wide::part(container) {
+          width: 1440px !important;
+          max-width: 98vw !important;
+          inline-size: 1440px !important;
+          max-inline-size: 98vw !important;
+          height: 90vh !important;
+          max-height: 90vh !important;
+        }
         .chipset { display:flex; gap:6px; flex-wrap: wrap; margin-top: 6px; }
         .chipset .chip { border-color: var(--border); }
     </style>
@@ -239,7 +253,7 @@
           <md-outlined-button id="modal-close">Close</md-outlined-button>
         </div>
       </div>
-      <div id="modal-body" class="modal-body" slot="content"></div>
+      <div id="modal-body" class="modal-body" slot="content" style="padding-bottom: 0;"></div>
       <div id="modal-footer" class="modal-footer" slot="actions" style="display:none;">
         <span id="filters-error" class="status error" style="min-height:18px; margin-right:auto;"></span>
         <md-outlined-button id="btn-clear-filters">Clear</md-outlined-button>
