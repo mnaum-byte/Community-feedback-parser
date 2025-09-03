@@ -177,18 +177,28 @@ app.post('/api/parse/start', async (req, res) => {
 			const queryCtx = query ? await prepareQueryContext(query) : await prepareQueryContext({ must: keywords || [], optional: [], exclude: [], featureDef: '', useSynonyms: false, useSemantic: false });
 			if (token) {
 				const client = createApiClient(token);
-				const sinceIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-				const suggestions = await listSuggestionsUpdatedSince(client, sinceIso);
-				let scanned = 0; let relevant = 0; const total = suggestions.length;
-				for (const s of suggestions) {
-					scanned += 1;
-					const resMatch = await require('./matcher').matchItem(`${s.title} ${s.description}`, queryCtx);
-					if (resMatch.isMatch) {
-						relevant += 1;
-						jobManager.broadcast(job.id, 'thread', { ...s, _why: resMatch.why });
+				const sinceIso = null; // fetch all and let matching filter relevance
+				let scanned = 0; let relevant = 0; let total = 0;
+				const concurrency = Number(process.env.THREADS_CONCURRENCY || 4);
+				await require('./uvapi').streamSuggestionsUpdatedSince(client, sinceIso, async (pageItems, pagination, perPage) => {
+					total = pagination?.total_entries || pagination?.total || (pagination?.total_pages ? pagination.total_pages * perPage : Math.max(total, scanned + pageItems.length));
+					// Process this page with limited concurrency
+					let idx = 0;
+					async function worker() {
+						while (idx < pageItems.length) {
+							const s = pageItems[idx++];
+							const resMatch = await require('./matcher').matchItem(`${s.title} ${s.description}`, queryCtx);
+							if (resMatch.isMatch) {
+								relevant += 1;
+								jobManager.broadcast(job.id, 'thread', { ...s, _why: resMatch.why });
+							}
+							scanned += 1;
+							jobManager.broadcast(job.id, 'progress', { phase: 'api', scannedThreads: scanned, totalThreads: total, totalRelevant: relevant });
+						}
 					}
-					jobManager.broadcast(job.id, 'progress', { phase: 'api', scannedThreads: scanned, totalThreads: total, totalRelevant: relevant });
-				}
+					const workers = Array.from({ length: Math.min(concurrency, pageItems.length) }, () => worker());
+					await Promise.all(workers);
+				});
 				jobManager.update(job.id, { status: 'completed', progress: 100 });
 				jobManager.broadcast(job.id, 'done', { ok: true });
 			} else {
@@ -242,22 +252,23 @@ app.post('/api/comments/start', async (req, res) => {
 					const idMatch = String(t.id || '').match(/\d+/);
 					const suggId = t.id || (idMatch ? Number(idMatch[0]) : null);
 					if (!suggId) { processed += 1; continue; }
-					const comments = await listCommentsForSuggestion(client, suggId);
 					let idx = 0;
-					for (const c of comments) {
-						let resMatch = await require('./matcher').matchItem(c.body, queryCtx);
-						if (!resMatch.isMatch && (queryCtx.must || []).length) {
-							const optional = Array.from(new Set([...(queryCtx.optional || []), ...(queryCtx.must || [])]));
-							resMatch = await require('./matcher').matchItem(c.body, { ...queryCtx, must: [], optional });
+					await require('./uvapi').streamCommentsForSuggestion(client, suggId, async (pageComments, pagination) => {
+						for (const c of pageComments) {
+							let resMatch = await require('./matcher').matchItem(c.body, queryCtx);
+							if (!resMatch.isMatch && (queryCtx.must || []).length) {
+								const optional = Array.from(new Set([...(queryCtx.optional || []), ...(queryCtx.must || [])]));
+								resMatch = await require('./matcher').matchItem(c.body, { ...queryCtx, must: [], optional });
+							}
+							if (!resMatch.isMatch) resMatch = await require('./matcher').matchItem(`${t.title} ${c.body}`, queryCtx);
+							if (resMatch.isMatch) {
+								totalRelevant += 1;
+								jobManager.broadcast(job.id, 'comment', { body: c.body, url: c.url || t.url, threadTitle: t.title, threadUrl: t.url, _why: resMatch.why });
+							}
+							idx += 1;
+							jobManager.broadcast(job.id, 'progress', { threadIndex: processed + 1, pageIndex: idx, totalPages: (pagination?.total_entries || 0), totalRelevant });
 						}
-						if (!resMatch.isMatch) resMatch = await require('./matcher').matchItem(`${t.title} ${c.body}`, queryCtx);
-						if (resMatch.isMatch) {
-							totalRelevant += 1;
-							jobManager.broadcast(job.id, 'comment', { body: c.body, url: c.url || t.url, threadTitle: t.title, threadUrl: t.url, _why: resMatch.why });
-						}
-						idx += 1;
-						jobManager.broadcast(job.id, 'progress', { threadIndex: processed + 1, pageIndex: idx, totalPages: comments.length, totalRelevant });
-					}
+					});
 					processed += 1;
 				}
 				jobManager.update(job.id, { status: 'completed', progress: 100 });

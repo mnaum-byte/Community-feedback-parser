@@ -43,12 +43,28 @@ function mapSuggestionToThread(s) {
 }
 
 async function listSuggestionsUpdatedSince(client, sinceIso) {
-	const items = await paginate(client, '/suggestions', { updated_after: sinceIso }, (d) => d.suggestions || d.items || []);
+	const params = sinceIso ? { updated_after: sinceIso } : {};
+	const items = await paginate(client, '/admin/suggestions', params, (d) => d.suggestions || d.items || []);
 	return items.map(mapSuggestionToThread);
 }
 
+async function streamSuggestionsUpdatedSince(client, sinceIso, onPage) {
+	let page = 1;
+	const perPage = 100;
+	for (;;) {
+		const params = { page, per_page: perPage };
+		if (sinceIso) params.updated_after = sinceIso;
+		const res = await client.get('/admin/suggestions', { params });
+		const data = res.data || {};
+		const items = (data.suggestions || data.items || []).map(mapSuggestionToThread);
+		await onPage(items, data.pagination || {}, perPage);
+		if (!items.length || (data.pagination && (data.pagination.page >= data.pagination.total_pages))) break;
+		page += 1;
+	}
+}
+
 async function listCommentsForSuggestion(client, suggestionId) {
-	const items = await paginate(client, '/comments', { suggestion: suggestionId }, (d) => d.comments || d.items || []);
+	const items = await paginate(client, '/admin/comments', { suggestion: suggestionId }, (d) => d.comments || d.items || []);
 	return items.map((c) => ({
 		id: c.id,
 		body: c.text || c.body || '',
@@ -57,4 +73,22 @@ async function listCommentsForSuggestion(client, suggestionId) {
 	}));
 }
 
-module.exports = { createApiClient, listSuggestionsUpdatedSince, listCommentsForSuggestion };
+async function streamCommentsForSuggestion(client, suggestionId, onPage) {
+	let page = 1;
+	const perPage = 100;
+	for (;;) {
+		const res = await client.get('/admin/comments', { params: { suggestion: suggestionId, page, per_page: perPage } });
+		const data = res.data || {};
+		const items = (data.comments || data.items || []).map((c) => ({
+			id: c.id,
+			body: c.text || c.body || '',
+			url: c.html_url || c.url || '',
+			created_at: c.created_at || c.createdAt || null,
+		}));
+		await onPage(items, data.pagination || {}, perPage);
+		if (!items.length || (data.pagination && (data.pagination.page >= data.pagination.total_pages))) break;
+		page += 1;
+	}
+}
+
+module.exports = { createApiClient, listSuggestionsUpdatedSince, streamSuggestionsUpdatedSince, listCommentsForSuggestion, streamCommentsForSuggestion };

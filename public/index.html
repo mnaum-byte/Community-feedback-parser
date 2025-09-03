@@ -177,8 +177,10 @@
        try {
          const res = await fetch('/auth/status');
          const data = await res.json();
-         isAuthed = !!data.authenticated;
-         el('auth-status').textContent = isAuthed ? 'Signed in' : 'Not signed in';
+         const hasCookieAuth = !!data.authenticated;
+         const hasOAuth = !!data.oauth;
+         isAuthed = hasCookieAuth || hasOAuth;
+         el('auth-status').textContent = hasCookieAuth ? 'Signed in' : (hasOAuth ? 'API auth' : 'Not signed in');
          el('auth-status').className = isAuthed ? 'badge ok' : 'badge';
        } catch (_) {
          el('auth-status').textContent = 'Unknown';
