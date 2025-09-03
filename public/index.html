@@ -17,13 +17,20 @@
             --border: #242a34;
             --accent: #4f8cff;
             --danger: #ff5c79;
+            --why-bg: #1b2230;
+            --why-border: #2a3750;
+            --why-must: #8fd19e;
+            --why-optional: #8fb5ff;
+            --why-exclude: #ff9aa6;
+            --why-prox: #ffd37a;
+            --why-sem: #b58cff;
         }
         *, *::before, *::after { box-sizing: border-box; }
         html, body { height: 100%; }
         body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; color: var(--text); background: radial-gradient(1200px 800px at 50% -20%, #141924 0%, var(--bg) 50%); }
         .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        h1 { font-size: 22px; margin: 0 0 8px 0; }
-        h2 { font-size: 16px; margin: 0 0 10px 0; color: var(--muted); }
+        h1 { font-size: 22px; margin: 0 0 8px 0; display:flex; gap:8px; align-items: baseline; justify-content: space-between; }
+        h2 { font-size: 16px; margin: 0 0 10px 0; color: var(--muted); display:flex; align-items:center; gap:8px; }
         .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
         .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; }
         .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
@@ -36,8 +43,9 @@
         button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
         .hint { font-size: 12px; color: var(--muted); }
         .section { margin: 0; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-top: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; table-layout: fixed; }
         th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px; font-size: 14px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+        thead th { position: sticky; top: 0; background: #141923; z-index: 1; }
         td a { color: #8fb5ff; text-decoration: none; word-break: break-word; overflow-wrap: anywhere; }
         td a:hover { text-decoration: underline; }
         th { color: var(--muted); font-weight: 600; background: #141923; }
@@ -69,15 +77,34 @@
         .content { flex: 1 1 70%; max-width: 70%; display: flex; flex-direction: column; gap: 24px; align-items: stretch; }
         .content > .section.panel { width: 100%; flex: 0 0 auto; margin: 0; }
         .section.panel table { width: 100%; }
+        .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+        .ghost { opacity: .6; pointer-events: none; }
+        .sr-announcer { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+        /* Why chips */
+        .why { display:flex; flex-wrap: wrap; gap:6px; }
+        .why .chip { border-color: var(--why-border); background: var(--why-bg); color: var(--muted); }
+        .why .chip.must { color: var(--why-must); border-color: rgba(111, 199, 141, .2); }
+        .why .chip.optional { color: var(--why-optional); border-color: rgba(143, 181, 255, .2); }
+        .why .chip.exclude { color: var(--why-exclude); border-color: rgba(255, 154, 166, .2); }
+        .why .chip.prox { color: var(--why-prox); border-color: rgba(255, 211, 122, .2); }
+        .why .chip.sem { color: var(--why-sem); border-color: rgba(181, 140, 255, .2); }
+        /* Mobile sidebar toggle */
+        .sidebar-toggle { display:none; }
         @media (max-width: 900px) {
           .app { flex-direction: column; }
           .sidebar, .content { max-width: 100%; flex-basis: auto; position: static; }
+          .sidebar { display: none; }
+          body.show-sidebar .sidebar { display: block; }
+          .sidebar-toggle { display:inline-flex; }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
  </head>
  <body>
    <div class="container">
-   <h1>UserVoice feedback extractor for Adobe Express <span class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">uservoice forum</a> )</span></h1>
+   <h1>UserVoice feedback extractor for Adobe Express <span class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">uservoice forum</a> )</span>
+     <button id="btn-toggle-sidebar" class="secondary sidebar-toggle" aria-controls="sidebar-panel" aria-expanded="false">Filters</button>
+   </h1>
 
    <div class="auth">
      <span>Sign in status</span>
@@ -85,7 +112,7 @@
    </div>
 
    <div class="app">
-     <aside class="sidebar">
+     <aside class="sidebar" id="sidebar-panel">
        <div class="panel">
          <h2>Search topics</h2>
          <div>
@@ -104,54 +131,71 @@
            <div class="hint">Items containing any will be excluded</div>
          </div>
          <div style="margin-top:8px;">
-           <label class="toggle"><span class="switch" id="toggle-syn"></span><span>Expand with synonyms</span><input class="sr-only" type="checkbox" id="useSynonyms" checked /></label>
+           <label class="toggle" title="Adds domain synonyms (e.g., 'brand kit' → 'brand assets'). Increases recall."><span class="switch" id="toggle-syn"></span><span>Expand with synonyms</span><input class="sr-only" type="checkbox" id="useSynonyms" checked /></label>
          </div>
          <div style="margin-top:12px;">
-           <label>Feature definition (1-3 sentences)</label>
+           <label title="Describe the functionality/flow you care about. Helps semantic matching.">Feature definition (1-3 sentences)</label>
            <textarea id="featureDef" placeholder="Describe the functionality/flow you care about..."></textarea>
            <div class="hint">Used for semantic matching</div>
          </div>
          <div style="margin-top:8px;">
-           <label class="toggle"><span class="switch" id="toggle-sem"></span><span>Use semantic matching</span><input class="sr-only" type="checkbox" id="useSemantic" /></label>
+           <label class="toggle" title="Uses embeddings to find semantically similar content; slower but more precise."><span class="switch" id="toggle-sem"></span><span>Use semantic matching</span><input class="sr-only" type="checkbox" id="useSemantic" /></label>
+         </div>
+         <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
+           <button id="btn-reset" class="secondary">Reset filters</button>
+           <span id="last-run" class="hint"></span>
          </div>
          <div class="panel-footer">
            <span id="parse-progress" class="progress"></span>
            <span id="parse-status" class="status"></span>
            <span id="parse-loader" class="loader">⏳</span>
+           <div class="toolbar">
+             <button id="btn-stop-parse" class="secondary ghost">Stop</button>
+           </div>
          </div>
        </div>
      </aside>
 
      <main class="content">
        <div class="section panel">
-         <h2>Relevant Threads</h2>
+         <div class="toolbar" style="justify-content: space-between;">
+           <h2>Relevant Threads <span id="selected-count" class="hint"></span></h2>
+           <div class="toolbar">
+             <button id="btn-export-threads-csv" class="secondary">Export CSV</button>
+             <button id="btn-export-threads-xlsx" class="secondary">Export XLSX</button>
+             <button id="btn-parse">Extract Relevant Threads</button>
+           </div>
+         </div>
          <table>
            <thead>
-             <tr><th>#</th><th>Title</th><th>URL</th><th>Why</th></tr>
+             <tr><th><input id="select-all" type="checkbox"/></th><th>#</th><th>Title</th><th>URL</th><th>Why</th></tr>
            </thead>
-           <tbody id="threads-body"></tbody>
+           <tbody id="threads-body" aria-live="polite"><tr id="threads-empty"><td colspan="5" class="hint">No threads yet. Run “Extract Relevant Threads”.</td></tr></tbody>
          </table>
-         <div class="panel-footer">
-           <span id="parse-progress" class="progress"></span>
-           <span id="parse-status" class="status"></span>
-           <span id="parse-loader" class="loader">⏳</span>
-           <button id="btn-parse">Extract Relevant Threads</button>
-         </div>
        </div>
 
        <div class="section panel">
-         <h2>User comments</h2>
+         <div class="toolbar" style="justify-content: space-between;">
+           <h2>User comments</h2>
+           <div class="toolbar">
+             <button id="btn-export-comments-csv" class="secondary">Export CSV</button>
+             <button id="btn-export-comments-xlsx" class="secondary">Export XLSX</button>
+             <button id="btn-extract">Extract User Comments</button>
+           </div>
+         </div>
          <table>
            <thead>
-            <tr><th>Comment</th><th>Thread URL</th><th>Why</th></tr>
+             <tr><th>Comment</th><th>Thread URL</th><th>Why</th></tr>
            </thead>
-           <tbody id="comments-body"></tbody>
+           <tbody id="comments-body" aria-live="polite"><tr id="comments-empty"><td colspan="3" class="hint">No comments yet. Use “Extract User Comments”.</td></tr></tbody>
          </table>
          <div class="panel-footer">
            <span id="comments-progress" class="progress"></span>
            <span id="comments-status" class="status"></span>
            <span id="comments-loader" class="loader">⏳</span>
-           <button id="btn-extract">Extract User Comments</button>
+           <div class="toolbar">
+             <button id="btn-stop-comments" class="secondary ghost">Stop</button>
+           </div>
          </div>
        </div>
      </main>
@@ -163,11 +207,16 @@
      <a id="logs-link" class="chip" href="#" target="_blank" rel="noopener" style="display:none;">Logs</a>
    </div>
 
+   <div id="sr-announce" class="sr-announcer" aria-live="polite"></div>
+
    <script>
      const el = (id) => document.getElementById(id);
      let relevantThreads = [];
+     let selectedThreads = new Set();
      let threadRowCount = 0;
      let isAuthed = false;
+     let sseParse = null;
+     let sseComments = null;
 
      // Production chip and backend info
      (function setEnvChips(){
@@ -204,6 +253,32 @@
        return (value || '').split(',').map(s => s.trim()).filter(Boolean);
      }
 
+     function loadFilters() {
+       try {
+         const raw = localStorage.getItem('uv_filters');
+         if (!raw) return;
+         const f = JSON.parse(raw);
+         if (f.optional != null) el('optionalKeywords').value = f.optional;
+         if (f.must != null) el('mustKeywords').value = f.must;
+         if (f.exclude != null) el('excludeKeywords').value = f.exclude;
+         if (f.featureDef != null) el('featureDef').value = f.featureDef;
+         if (f.useSynonyms != null) el('useSynonyms').checked = !!f.useSynonyms;
+         if (f.useSemantic != null) el('useSemantic').checked = !!f.useSemantic;
+       } catch (_) {}
+     }
+
+     function saveFilters() {
+       const payload = {
+         optional: el('optionalKeywords').value,
+         must: el('mustKeywords').value,
+         exclude: el('excludeKeywords').value,
+         featureDef: el('featureDef').value,
+         useSynonyms: el('useSynonyms').checked,
+         useSemantic: el('useSemantic').checked,
+       };
+       localStorage.setItem('uv_filters', JSON.stringify(payload));
+     }
+
      function buildQueryPayload() {
        return {
          cookie: '',
@@ -218,29 +293,27 @@
        };
      }
 
-     function bindToggle(switchEl, inputEl) {
-       const labelEl = inputEl.closest('label');
-       const sync = () => {
-         const on = !!inputEl.checked;
-         switchEl.classList.toggle('on', on);
-         switchEl.setAttribute('aria-checked', String(on));
-         switchEl.setAttribute('role', 'switch');
-       };
-       const handleClick = (ev) => {
-         ev.preventDefault();
-         ev.stopPropagation();
-         inputEl.checked = !inputEl.checked;
-         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-       };
-       if (labelEl) labelEl.addEventListener('click', handleClick);
-       switchEl.addEventListener('click', handleClick);
-       inputEl.addEventListener('change', sync);
-       sync();
+     function announce(msg) { const n = document.getElementById('sr-announce'); if (n) n.textContent = msg; }
+
+     function clearThreads() {
+       el('threads-body').innerHTML = '<tr id="threads-empty"><td colspan="5" class="hint">No threads yet. Run “Extract Relevant Threads”.</td></tr>';
+       relevantThreads = []; selectedThreads.clear(); threadRowCount = 0;
+     }
+
+     function clearComments() {
+       el('comments-body').innerHTML = '<tr id="comments-empty"><td colspan="3" class="hint">No comments yet. Use “Extract User Comments”.</td></tr>';
      }
 
      function renderThread(row) {
+       const empty = el('threads-empty'); if (empty) empty.remove();
        const tr = document.createElement('tr');
        tr.dataset.threadUrl = row.url;
+       const tdSel = document.createElement('td');
+       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.addEventListener('change', () => {
+         if (cb.checked) selectedThreads.add(row.url); else selectedThreads.delete(row.url);
+         updateSelectionUI();
+       });
+       tdSel.appendChild(cb);
        const tdIdx = document.createElement('td');
        const tdTitle = document.createElement('td');
        const tdUrl = document.createElement('td');
@@ -250,9 +323,16 @@
        const a = document.createElement('a');
        a.href = row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Thread URL';
        tdUrl.appendChild(a);
-       tdWhy.textContent = row._why || '';
-       tr.appendChild(tdIdx); tr.appendChild(tdTitle); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
+       tdWhy.appendChild(formatWhy(row._why));
+       tr.appendChild(tdSel); tr.appendChild(tdIdx); tr.appendChild(tdTitle); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
        el('threads-body').appendChild(tr);
+       announce('Thread added: ' + row.title);
+     }
+
+     function updateSelectionUI() {
+       const count = selectedThreads.size;
+       const badge = document.getElementById('selected-count');
+       if (badge) badge.textContent = count ? '(' + count + ' selected)' : '';
      }
 
      function markThreadNote(threadUrl, note) {
@@ -273,88 +353,155 @@
      }
 
      function renderComment(row) {
+       const empty = el('comments-empty'); if (empty) empty.remove();
        const tr = document.createElement('tr');
        const tdBody = document.createElement('td');
        const tdThreadUrl = document.createElement('td');
        const tdWhy = document.createElement('td');
        tdBody.textContent = row.body;
        const a = document.createElement('a'); a.href = row.threadUrl || row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = row.threadTitle || 'Thread URL'; tdThreadUrl.appendChild(a);
-       tdWhy.textContent = row._why || '';
+       tdWhy.appendChild(formatWhy(row._why));
        tr.appendChild(tdBody); tr.appendChild(tdThreadUrl); tr.appendChild(tdWhy);
        el('comments-body').appendChild(tr);
+       announce('Comment added');
+     }
+
+     function formatWhy(text) {
+       const container = document.createElement('div');
+       container.className = 'why';
+       if (!text) return container;
+       const tokens = String(text).split(/[;|,\n]+/).map(t=>t.trim()).filter(Boolean);
+       tokens.forEach(tok => {
+         const m = /^([^:]+):\s*(.+)$/.exec(tok);
+         let label = '', value = '';
+         if (m) { label = m[1].toLowerCase(); value = m[2]; } else { value = tok; }
+         const span = document.createElement('span');
+         span.className = 'chip';
+         if (/must/.test(label)) span.classList.add('must');
+         else if (/optional|syn/.test(label)) span.classList.add('optional');
+         else if (/exclude|not/.test(label)) span.classList.add('exclude');
+         else if (/prox|near|distance/.test(label)) span.classList.add('prox');
+         else if (/sem|embedding|cosine|score/.test(label)) span.classList.add('sem');
+         span.textContent = m ? `${label}: ${value}` : value;
+         container.appendChild(span);
+       });
+       return container;
+     }
+
+     function setLastRun(kind, info) {
+       const t = new Date().toLocaleTimeString();
+       el('last-run').textContent = (kind === 'threads') ? `Last threads run: ${t} (${info})` : `Last comments run: ${t} (${info})`;
      }
 
      async function startParse() {
-       el('threads-body').innerHTML = '';
+       clearThreads();
        el('parse-status').textContent = '';
        el('parse-progress').textContent = '';
-       relevantThreads = [];
-       threadRowCount = 0;
        const payload = buildQueryPayload();
        if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
        const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
-       el('parse-loader').style.display = 'inline';
+       el('parse-loader').style.display = 'inline'; el('btn-stop-parse').classList.remove('ghost');
        try {
          const res = await fetch('/api/parse/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
          const { jobId, error } = await res.json();
          if (!res.ok) throw new Error(error || 'Failed to start parse job');
-         const sse = new EventSource(`/api/parse/events/${jobId}`);
-         sse.addEventListener('connected', () => { el('parse-status').textContent = 'Connected'; el('parse-status').className = 'status'; });
-         sse.addEventListener('thread', (ev) => { const row = JSON.parse(ev.data); relevantThreads.push(row); renderThread(row); });
-         sse.addEventListener('progress', (ev) => {
+         if (sseParse) { try { sseParse.close(); } catch(_){} }
+         sseParse = new EventSource(`/api/parse/events/${jobId}`);
+         sseParse.addEventListener('connected', () => { el('parse-status').textContent = 'Connected'; el('parse-status').className = 'status'; });
+         sseParse.addEventListener('thread', (ev) => { const row = JSON.parse(ev.data); relevantThreads.push(row); renderThread(row); updateSelectionUI(); });
+         sseParse.addEventListener('progress', (ev) => {
            const p = JSON.parse(ev.data);
            if (p.phase === 'discover') {
-             el('parse-progress').textContent = `Discovering pages: ${p.discoveredPages || p.pageIndex}`;
+             el('parse-progress').textContent = `Pages discovered: ${p.discoveredPages || p.pageIndex}`;
              return;
            }
-           const percent = (p.totalThreads && p.scannedThreads != null) ? Math.floor((p.scannedThreads / Math.max(1, p.totalThreads)) * 100) : null;
-           const pctText = percent != null ? ` | ${percent}% complete (${p.scannedThreads}/${p.totalThreads})` : '';
-           const pagesText = (p.pageIndex && p.totalPages) ? ` | Pages: ${p.pageIndex}/${p.totalPages}` : (p.pageIndex ? ` | Pages: ${p.pageIndex}` : '');
-           el('parse-progress').textContent = `Relevant: ${p.totalRelevant || 0}${pctText}${pagesText}`;
+           const scanned = p.scannedThreads || 0; const total = p.totalThreads || 0; const rel = p.totalRelevant || 0;
+           el('parse-progress').textContent = `Threads scanned: ${scanned}/${total} | Relevant: ${rel}`;
          });
-         sse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; sse.close(); el('parse-loader').style.display = 'none'; });
-         sse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; sse.close(); el('parse-loader').style.display = 'none'; });
-       } catch (e) { el('parse-status').textContent = e.message; el('parse-status').className = 'status error'; el('parse-loader').style.display = 'none'; }
+         sseParse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; sseParse.close(); el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); });
+         sseParse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; sseParse.close(); el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); setLastRun('threads', `${relevantThreads.length} found`); });
+       } catch (e) { el('parse-status').textContent = e.message; el('parse-status').className = 'status error'; el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); }
      }
 
+     function stopParse() { if (sseParse) { try { sseParse.close(); } catch(_){} } el('parse-status').textContent = 'Stopped'; el('btn-stop-parse').classList.add('ghost'); }
+
      async function startExtract() {
-       el('comments-body').innerHTML = '';
+       clearComments();
        el('comments-status').textContent = '';
        el('comments-progress').textContent = '';
        const payload = buildQueryPayload();
        if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
-       if (relevantThreads.length === 0) { el('comments-status').textContent = 'Run Parse Forum first'; el('comments-status').className = 'status error'; return; }
-       el('comments-loader').style.display = 'inline';
+       const threadsToUse = (selectedThreads.size ? relevantThreads.filter(t => selectedThreads.has(t.url)) : relevantThreads);
+       if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
+       el('comments-loader').style.display = 'inline'; el('btn-stop-comments').classList.remove('ghost');
        try {
          const res = await fetch('/api/comments/start', { 
            method: 'POST', 
            headers: { 'Content-Type': 'application/json' }, 
-           body: JSON.stringify({ ...payload, threads: relevantThreads }) 
+           body: JSON.stringify({ ...payload, threads: threadsToUse }) 
          });
          const { jobId, error } = await res.json();
          if (!res.ok) throw new Error(error || 'Failed to start comments job');
-         const sse = new EventSource(`/api/comments/events/${jobId}`);
-         sse.addEventListener('connected', () => { 
+         if (sseComments) { try { sseComments.close(); } catch(_){} }
+         sseComments = new EventSource(`/api/comments/events/${jobId}`);
+         sseComments.addEventListener('connected', () => { 
            el('comments-status').textContent = 'Connected'; 
            el('comments-status').className = 'status'; 
          });
-         sse.addEventListener('comment', (ev) => { 
+         sseComments.addEventListener('comment', (ev) => { 
            const row = JSON.parse(ev.data); 
            renderComment(row); 
          });
-         sse.addEventListener('threadNoComments', (ev) => { 
+         sseComments.addEventListener('threadNoComments', (ev) => { 
            const d = JSON.parse(ev.data); 
            markThreadNote(d.threadUrl, 'No comments'); 
          });
-         sse.addEventListener('threadNoMatches', (ev) => { const d = JSON.parse(ev.data); markThreadNote(d.threadUrl, 'No matches'); });
-         sse.addEventListener('progress', (ev) => { const p = JSON.parse(ev.data); el('comments-progress').textContent = `Threads: ${p.threadIndex} | Relevant: ${p.totalRelevant}`; });
-         sse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; sse.close(); el('comments-loader').style.display = 'none'; });
-         sse.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; sse.close(); el('comments-loader').style.display = 'none'; });
-       } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; }
+         sseComments.addEventListener('threadNoMatches', (ev) => { const d = JSON.parse(ev.data); markThreadNote(d.threadUrl, 'No matches'); });
+         sseComments.addEventListener('progress', (ev) => { const p = JSON.parse(ev.data); el('comments-progress').textContent = `Threads processed: ${p.threadIndex || 0} | Relevant: ${p.totalRelevant || 0}`; });
+         sseComments.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; sseComments.close(); el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); });
+         sseComments.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; sseComments.close(); el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); setLastRun('comments', `${el('comments-body').children.length} added`); });
+       } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); }
      }
 
-     // Bind custom toggles (init immediately since script is after HTML)
+     function stopComments() { if (sseComments) { try { sseComments.close(); } catch(_){} } el('comments-status').textContent = 'Stopped'; el('btn-stop-comments').classList.add('ghost'); }
+
+     // Exports
+     function exportThreadsCSV() {
+       if (!relevantThreads.length) return;
+       const rows = [['#','Title','URL','Why']];
+       relevantThreads.forEach((t,i)=>rows.push([i+1,t.title,t.url,t._why||'']));
+       downloadCSV(rows, 'threads.csv');
+     }
+     function exportCommentsCSV() {
+       const rows = [['Comment','Thread Title','Thread URL','Why']];
+       const trs = Array.from(el('comments-body').children);
+       trs.forEach(tr=>{
+         const tds = tr.querySelectorAll('td'); if (tds.length<3) return;
+         const body=tds[0].textContent||''; const linkEl=tds[1].querySelector('a'); const title=linkEl?linkEl.textContent:''; const url=linkEl?linkEl.href:''; const why=tds[2].textContent||'';
+         rows.push([body,title,url,why]);
+       });
+       downloadCSV(rows, 'comments.csv');
+     }
+     function downloadCSV(rows, filename){
+       const csv = rows.map(r=>r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+     }
+     function exportThreadsXLSX(){ if(!relevantThreads.length) return; const wb=XLSX.utils.book_new(); const data=[['#','Title','URL','Why']]; relevantThreads.forEach((t,i)=>data.push([i+1,t.title,t.url,t._why||''])); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Threads'); XLSX.writeFile(wb,'threads.xlsx'); }
+     function exportCommentsXLSX(){ const wb=XLSX.utils.book_new(); const data=[['Comment','Thread Title','Thread URL','Why']]; const trs=Array.from(el('comments-body').children); trs.forEach(tr=>{const tds=tr.querySelectorAll('td'); if(tds.length<3)return; const body=tds[0].textContent||''; const linkEl=tds[1].querySelector('a'); const title=linkEl?linkEl.textContent:''; const url=linkEl?linkEl.href:''; const why=tds[2].textContent||''; data.push([body,title,url,why]);}); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Comments'); XLSX.writeFile(wb,'comments.xlsx'); }
+
+     // Ensure content min-height matches sidebar height
+     function syncLayoutHeights() {
+       const sidebar = document.querySelector('.sidebar');
+       const content = document.querySelector('.content');
+       if (sidebar && content) { content.style.minHeight = sidebar.offsetHeight + 'px'; }
+     }
+     window.addEventListener('load', syncLayoutHeights);
+     window.addEventListener('resize', syncLayoutHeights);
+     setTimeout(syncLayoutHeights, 0);
+
+     // Events
      const synSwitch = document.getElementById('toggle-syn');
      const synInput = document.getElementById('useSynonyms');
      const semSwitch = document.getElementById('toggle-sem');
@@ -362,19 +509,58 @@
      if (synSwitch && synInput) bindToggle(synSwitch, synInput);
      if (semSwitch && semInput) bindToggle(semSwitch, semInput);
 
-     el('btn-parse').addEventListener('click', startParse);
-     el('btn-extract').addEventListener('click', startExtract);
-     // Ensure content min-height matches sidebar height
-     function syncLayoutHeights() {
-       const sidebar = document.querySelector('.sidebar');
-       const content = document.querySelector('.content');
-       if (sidebar && content) {
-         content.style.minHeight = sidebar.offsetHeight + 'px';
-       }
+     function bindToggle(switchEl, inputEl) {
+       const labelEl = inputEl.closest('label');
+       const sync = () => {
+         const on = !!inputEl.checked;
+         switchEl.classList.toggle('on', on);
+         switchEl.setAttribute('aria-checked', String(on));
+         switchEl.setAttribute('role', 'switch');
+         saveFilters();
+       };
+       const handleClick = (ev) => {
+         ev.preventDefault();
+         ev.stopPropagation();
+         inputEl.checked = !inputEl.checked;
+         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+       };
+       if (labelEl) labelEl.addEventListener('click', handleClick);
+       switchEl.addEventListener('click', handleClick);
+       inputEl.addEventListener('change', sync);
+       sync();
      }
-     window.addEventListener('load', syncLayoutHeights);
-     window.addEventListener('resize', syncLayoutHeights);
-     setTimeout(syncLayoutHeights, 0);
+
+     // Save filters on input
+     ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{
+       const e = el(id); if (!e) return; e.addEventListener('input', () => saveFilters());
+     });
+
+     // Selection
+     el('select-all').addEventListener('change', (ev)=>{
+       const checked = ev.target.checked; const rows = el('threads-body').querySelectorAll('input[type="checkbox"]');
+       rows.forEach(cb=>{ cb.checked = checked; const tr = cb.closest('tr'); if (!tr) return; const url = tr.dataset.threadUrl; if (checked) selectedThreads.add(url); else selectedThreads.delete(url); });
+       updateSelectionUI();
+     });
+
+     el('btn-parse').addEventListener('click', startParse);
+     el('btn-stop-parse').addEventListener('click', stopParse);
+     el('btn-extract').addEventListener('click', startExtract);
+     el('btn-stop-comments').addEventListener('click', stopComments);
+     el('btn-export-threads-csv').addEventListener('click', exportThreadsCSV);
+     el('btn-export-threads-xlsx').addEventListener('click', exportThreadsXLSX);
+     el('btn-export-comments-csv').addEventListener('click', exportCommentsCSV);
+     el('btn-export-comments-xlsx').addEventListener('click', exportCommentsXLSX);
+     el('btn-reset').addEventListener('click', ()=>{ ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>el(id).value=''); el('useSynonyms').checked=true; el('useSemantic').checked=false; saveFilters(); });
+     const btnToggle = el('btn-toggle-sidebar');
+     if (btnToggle) {
+       btnToggle.addEventListener('click', () => {
+         const show = !document.body.classList.contains('show-sidebar');
+         document.body.classList.toggle('show-sidebar', show);
+         btnToggle.setAttribute('aria-expanded', String(show));
+       });
+     }
+
+     loadFilters();
      refreshAuth();
    </script>
  </body>
