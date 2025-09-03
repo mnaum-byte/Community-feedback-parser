@@ -127,19 +127,19 @@
           background: var(--panel);
           border: 1px solid var(--border);
           /* Ensure a larger default width */
-          width: 1200px !important;
+          width: 560px !important;
           max-width: 98vw !important;
-          min-width: 960px !important;
+          min-width: 560px !important;
           min-height: 60vh !important;
         }
         /* Medium (wider) container for filters */
         md-dialog.medium::part(container) {
-          width: 1200px !important;
+          width: 560px !important;
           max-width: 98vw !important;
-          min-width: 960px !important;
-          inline-size: 1200px !important;
+          min-width: 560px !important;
+          inline-size: 560px !important;
           max-inline-size: 98vw !important;
-          min-inline-size: 960px !important;
+          min-inline-size: 560px !important;
           max-height: 94vh !important;
           height: auto !important;
         }
@@ -484,7 +484,7 @@
           ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = document.getElementById(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
         }
         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
-        if (modalBody) { modalBody.style.minWidth = '960px'; modalBody.style.minHeight = 'auto'; }
+        if (modalBody) { modalBody.style.minWidth = ''; modalBody.style.width = '100%'; modalBody.style.maxWidth = '100%'; modalBody.style.minHeight = 'auto'; }
       } else {
         mdDialog?.classList.remove('medium');
         mdDialog?.classList.add('wide');
