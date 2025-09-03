@@ -215,25 +215,23 @@
         </table>
       </div>
     </main>
-    <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
-      <div class="modal" id="modal-root" role="document" tabindex="-1">
-        <div class="modal-header">
-          <h2 id="modal-title" style="margin:0;">Results</h2>
-          <div class="toolbar" id="modal-progress-wrap">
-            <span id="modal-progress" class="progress"></span>
-            <span id="modal-status" class="status"></span>
-            <span id="modal-loader" class="loader">⏳</span>
-          </div>
-          <md-outlined-button id="modal-close" class="modal-close">Close</md-outlined-button>
-        </div>
-        <div id="modal-body" class="modal-body"></div>
-        <div id="modal-footer" class="modal-footer" style="display:none;">
-          <span id="filters-error" class="status error" style="min-height:18px;"></span>
-          <md-outlined-button id="btn-clear-filters">Clear</md-outlined-button>
-          <md-filled-button id="btn-save-filters">Save</md-filled-button>
+    <md-dialog id="app-dialog">
+      <div class="toolbar" id="modal-head" slot="headline" style="justify-content: space-between; gap: 12px; align-items: center;">
+        <h2 id="modal-title" style="margin:0;">Results</h2>
+        <div class="toolbar" id="modal-progress-wrap">
+          <span id="modal-progress" class="progress"></span>
+          <span id="modal-status" class="status"></span>
+          <span id="modal-loader" class="loader">⏳</span>
+          <md-outlined-button id="modal-close">Close</md-outlined-button>
         </div>
       </div>
-    </div>
+      <div id="modal-body" class="modal-body" slot="content"></div>
+      <div id="modal-footer" class="modal-footer" slot="actions" style="display:none;">
+        <span id="filters-error" class="status error" style="min-height:18px; margin-right:auto;"></span>
+        <md-outlined-button id="btn-clear-filters">Clear</md-outlined-button>
+        <md-filled-button id="btn-save-filters">Save</md-filled-button>
+      </div>
+    </md-dialog>
   </div>
 
   <div class="footerbar">
@@ -260,6 +258,7 @@
     import 'https://unpkg.com/@material/web@latest/button/outlined-button.js?module';
     import 'https://unpkg.com/@material/web@latest/textfield/outlined-text-field.js?module';
     import 'https://unpkg.com/@material/web@latest/switch/switch.js?module';
+    import 'https://unpkg.com/@material/web@latest/dialog/dialog.js?module';
     // Note: Dialog kept custom for now; consider md-dialog in a later step
     const el = (id) => document.getElementById(id);
     let relevantThreads = [];
@@ -416,8 +415,8 @@
     function announce(msg) { /* no-op; remove screen reader announcements */ }
 
     // Modal refs and helpers
-    const modalOverlay = el('modal-overlay');
-    const modalRoot = el('modal-root');
+    const mdDialog = document.getElementById('app-dialog');
+    const modalRoot = mdDialog; // alias for compatibility
     const modalTitle = el('modal-title');
     const modalBody = el('modal-body');
     const modalFooter = el('modal-footer');
@@ -452,10 +451,7 @@
         const section = document.getElementById(sectionId);
         if (section) modalBody.appendChild(section);
       }
-      modalOverlay.removeAttribute('hidden');
-      modalOverlay.classList.add('open');
-      modalOverlay.setAttribute('aria-hidden', 'false');
-      trapFocusOpen();
+      try { mdDialog?.show(); } catch(_) { mdDialog?.open = true; }
     }
 
     function closeModal() {
@@ -465,14 +461,11 @@
       if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
       if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
       if (modalCurrent === 'filters') { modalBody.innerHTML = ''; }
-      modalOverlay.classList.remove('open');
-      modalOverlay.setAttribute('aria-hidden', 'true');
-      modalOverlay.setAttribute('hidden', '');
+      try { mdDialog?.close(); } catch(_) { mdDialog?.open = false; }
       modalCurrent = null;
-      trapFocusClose();
     }
     if (modalClose) modalClose.addEventListener('click', closeModal);
-    modalOverlay?.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeModal(); });
+    mdDialog?.addEventListener('closed', ()=>{ modalCurrent=null; });
 
     // Focus trap & keyboard shortcuts
     let lastFocused = null;
