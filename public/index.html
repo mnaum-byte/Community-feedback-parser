@@ -100,8 +100,7 @@
         .stack { display:flex; flex-direction:column; gap:8px; }
         .sidebar .toolbar { justify-content:flex-start; }
         .ghost { opacity: .6; pointer-events: none; }
-        /* Hide filters panel in sidebar until opened in modal */
-        #filters-section { display: none !important; }
+        /* Filters now live inside md-dialog; no sidebar rendering */
         /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; pointer-events: none; }
         .modal-overlay.open { display: flex; pointer-events: auto; }
