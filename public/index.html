@@ -85,9 +85,9 @@
         .sr-announcer { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
         /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal { width: min(1000px, 96vw); max-height: 90vh; background: var(--panel); border:1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal { width: min(1000px, 96vw); max-height: 90vh; height: 90vh; background: var(--panel); border:1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
         .modal-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom:1px solid var(--border); }
-        .modal-body { padding: 12px 16px; overflow: auto; }
+        .modal-body { flex: 1 1 auto; padding: 12px 16px; overflow: auto; }
         .modal-close { border:1px solid var(--border); background: transparent; color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
         /* Why chips */
         .why { display:flex; flex-wrap: wrap; gap:6px; }
