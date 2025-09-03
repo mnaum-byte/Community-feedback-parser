@@ -410,22 +410,32 @@
     let modalCurrent = null; // 'threads' | 'comments' | 'filters' | null
 
     function openModalWith(sectionId, title) {
-      let section = document.getElementById(sectionId);
-      if (!section) return;
       modalTitle.textContent = title;
       if (sectionId === 'filters-section') {
         modalCurrent = 'filters';
         if (modalRoot) modalRoot.classList.add('compact');
         if (modalFooter) modalFooter.style.display = 'flex';
         modalBody.innerHTML = '';
-        Array.from(section.children).forEach(child => { child.style.display = ''; modalBody.appendChild(child); });
+        // Render fresh instance from template so filters never appear on page
+        const tpl = document.getElementById('filters-template');
+        if (tpl && tpl.content) {
+          const frag = tpl.content.cloneNode(true);
+          const sec = frag.querySelector('#filters-section');
+          if (sec) { while (sec.firstChild) modalBody.appendChild(sec.firstChild); }
+          else { modalBody.appendChild(frag); }
+          // Hydrate values from storage
+          try { const raw = localStorage.getItem('uv_filters'); if (raw) { const f = JSON.parse(raw); const setV=(id,v)=>{ const el=document.getElementById(id); if (el) el.value=v||''; }; setV('optionalKeywords', f.optional||''); setV('mustKeywords', f.must||''); setV('excludeKeywords', f.exclude||''); setV('featureDef', f.featureDef||''); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=!!f.useSynonyms; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=!!f.useSemantic; } } catch(_) {}
+          // Bind listeners for this instance
+          ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = document.getElementById(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
+        }
         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
       } else {
         modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
         if (modalRoot) modalRoot.classList.remove('compact');
         if (modalFooter) modalFooter.style.display = 'none';
         modalBody.innerHTML = '';
-        modalBody.appendChild(section);
+        const section = document.getElementById(sectionId);
+        if (section) modalBody.appendChild(section);
       }
       modalOverlay.removeAttribute('hidden');
       modalOverlay.classList.add('open');
@@ -435,16 +445,11 @@
 
     function closeModal() {
       const content = document.querySelector('main.content');
-      const sidebar = document.getElementById('sidebar-panel');
       const threadsSec = document.getElementById('threads-section');
       const commentsSec = document.getElementById('comments-section');
-      const filtersSec = document.getElementById('filters-section');
       if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
       if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
-      if (sidebar && filtersSec && modalCurrent === 'filters') {
-       while (modalBody.firstChild) filtersSec.appendChild(modalBody.firstChild);
-       filtersSec.style.display = 'none';
-      }
+      if (modalCurrent === 'filters') { modalBody.innerHTML = ''; }
       modalOverlay.classList.remove('open');
       modalOverlay.setAttribute('aria-hidden', 'true');
       modalOverlay.setAttribute('hidden', '');
