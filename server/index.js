@@ -5,10 +5,11 @@ const session = require('express-session');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { initSSE } = require('./sse');
 const { jobManager } = require('./jobs');
-const { findRelevantThreads, extractRelevantComments } = require('./scrape');
+const { findRelevantThreads: scrapeThreads, extractRelevantComments: scrapeComments } = require('./scrape');
 const { prepareQueryContext } = require('./matcher');
 const { createClient } = require('./request');
 const { nanoid } = require('nanoid');
+const { createApiClient, listSuggestionsUpdatedSince, listCommentsForSuggestion } = require('./uvapi');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,7 +92,7 @@ app.get('/auth/adopt', async (req, res) => {
 
 app.get('/auth/status', async (req, res) => {
 	const result = await probeCookie(req.session.uservoiceCookie || '');
-	res.json({ authenticated: result.authenticated, reason: result.reason });
+	res.json({ authenticated: result.authenticated, reason: result.reason, oauth: !!process.env.UV_OAUTH_TOKEN });
 });
 
 // Dynamic host-aware proxy for *.uservoice.com
@@ -127,7 +128,7 @@ app.use('/auth/proxy/_host/:host', createProxyMiddleware({
 	},
 }));
 
-// Default proxy (entry point)
+// Default proxy
 app.use('/auth/proxy', createProxyMiddleware({
 	target: 'https://adobeexpress.uservoice.com',
 	changeOrigin: true,
@@ -163,8 +164,9 @@ app.use('/auth/proxy', createProxyMiddleware({
 app.post('/api/parse/start', async (req, res) => {
 	const { cookie, keywords, query } = req.body || {};
 	const cookieToUse = cookie || req.session.uservoiceCookie;
-	if (!cookieToUse) {
-		return res.status(400).json({ error: 'Not authenticated. Sign in or provide a cookie.' });
+	const token = process.env.UV_OAUTH_TOKEN || '';
+	if (!cookieToUse && !token) {
+		return res.status(400).json({ error: 'Not authenticated. Sign in, provide a cookie, or set UV_OAUTH_TOKEN.' });
 	}
 	const job = jobManager.createJob('parse', { });
 	res.json({ jobId: job.id });
@@ -173,14 +175,32 @@ app.post('/api/parse/start', async (req, res) => {
 		try {
 			jobManager.update(job.id, { status: 'running' });
 			const queryCtx = query ? await prepareQueryContext(query) : await prepareQueryContext({ must: keywords || [], optional: [], exclude: [], featureDef: '', useSynonyms: false, useSemantic: false });
-			await findRelevantThreads(
-				cookieToUse,
-				queryCtx,
-				(evt) => jobManager.broadcast(job.id, evt.type, evt.data),
-				(progress) => jobManager.broadcast(job.id, 'progress', progress)
-			);
-			jobManager.update(job.id, { status: 'completed', progress: 100 });
-			jobManager.broadcast(job.id, 'done', { ok: true });
+			if (token) {
+				const client = createApiClient(token);
+				const sinceIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+				const suggestions = await listSuggestionsUpdatedSince(client, sinceIso);
+				let scanned = 0; let relevant = 0; const total = suggestions.length;
+				for (const s of suggestions) {
+					scanned += 1;
+					const resMatch = await require('./matcher').matchItem(`${s.title} ${s.description}`, queryCtx);
+					if (resMatch.isMatch) {
+						relevant += 1;
+						jobManager.broadcast(job.id, 'thread', { ...s, _why: resMatch.why });
+					}
+					jobManager.broadcast(job.id, 'progress', { phase: 'api', scannedThreads: scanned, totalThreads: total, totalRelevant: relevant });
+				}
+				jobManager.update(job.id, { status: 'completed', progress: 100 });
+				jobManager.broadcast(job.id, 'done', { ok: true });
+			} else {
+				await scrapeThreads(
+					cookieToUse,
+					queryCtx,
+					(evt) => jobManager.broadcast(job.id, evt.type, evt.data),
+					(progress) => jobManager.broadcast(job.id, 'progress', progress)
+				);
+				jobManager.update(job.id, { status: 'completed', progress: 100 });
+				jobManager.broadcast(job.id, 'done', { ok: true });
+			}
 		} catch (e) {
 			jobManager.update(job.id, { status: 'error', error: e.message });
 			jobManager.broadcast(job.id, 'error', { message: e.message });
@@ -204,7 +224,8 @@ app.get('/api/parse/events/:jobId', (req, res) => {
 app.post('/api/comments/start', async (req, res) => {
 	const { cookie, keywords, threads, query } = req.body || {};
 	const cookieToUse = cookie || req.session.uservoiceCookie;
-	if (!cookieToUse || !Array.isArray(threads)) {
+	const token = process.env.UV_OAUTH_TOKEN || '';
+	if ((!cookieToUse && !token) || !Array.isArray(threads)) {
 		return res.status(400).json({ error: 'Not authenticated or missing threads[]' });
 	}
 	const job = jobManager.createJob('comments', { });
@@ -214,16 +235,45 @@ app.post('/api/comments/start', async (req, res) => {
 		try {
 			jobManager.update(job.id, { status: 'running' });
 			const queryCtx = query ? await prepareQueryContext(query) : await prepareQueryContext({ must: keywords || [], optional: [], exclude: [], featureDef: '', useSynonyms: false, useSemantic: false });
-			await extractRelevantComments(
-				cookieToUse,
-				threads,
-				queryCtx,
-				Date.now() - 365 * 24 * 60 * 60 * 1000,
-				(evt) => jobManager.broadcast(job.id, evt.type, evt.data),
-				(progress) => jobManager.broadcast(job.id, 'progress', progress)
-			);
-			jobManager.update(job.id, { status: 'completed', progress: 100 });
-			jobManager.broadcast(job.id, 'done', { ok: true });
+			if (token) {
+				const client = createApiClient(token);
+				let processed = 0; let totalRelevant = 0;
+				for (const t of threads) {
+					const idMatch = String(t.id || '').match(/\d+/);
+					const suggId = t.id || (idMatch ? Number(idMatch[0]) : null);
+					if (!suggId) { processed += 1; continue; }
+					const comments = await listCommentsForSuggestion(client, suggId);
+					let idx = 0;
+					for (const c of comments) {
+						let resMatch = await require('./matcher').matchItem(c.body, queryCtx);
+						if (!resMatch.isMatch && (queryCtx.must || []).length) {
+							const optional = Array.from(new Set([...(queryCtx.optional || []), ...(queryCtx.must || [])]));
+							resMatch = await require('./matcher').matchItem(c.body, { ...queryCtx, must: [], optional });
+						}
+						if (!resMatch.isMatch) resMatch = await require('./matcher').matchItem(`${t.title} ${c.body}`, queryCtx);
+						if (resMatch.isMatch) {
+							totalRelevant += 1;
+							jobManager.broadcast(job.id, 'comment', { body: c.body, url: c.url || t.url, threadTitle: t.title, threadUrl: t.url, _why: resMatch.why });
+						}
+						idx += 1;
+						jobManager.broadcast(job.id, 'progress', { threadIndex: processed + 1, pageIndex: idx, totalPages: comments.length, totalRelevant });
+					}
+					processed += 1;
+				}
+				jobManager.update(job.id, { status: 'completed', progress: 100 });
+				jobManager.broadcast(job.id, 'done', { ok: true });
+			} else {
+				await scrapeComments(
+					cookieToUse,
+					threads,
+					queryCtx,
+					Date.now() - 365 * 24 * 60 * 60 * 1000,
+					(evt) => jobManager.broadcast(job.id, evt.type, evt.data),
+					(progress) => jobManager.broadcast(job.id, 'progress', progress)
+				);
+				jobManager.update(job.id, { status: 'completed', progress: 100 });
+				jobManager.broadcast(job.id, 'done', { ok: true });
+			}
 		} catch (e) {
 			jobManager.update(job.id, { status: 'error', error: e.message });
 			jobManager.broadcast(job.id, 'error', { message: e.message });
