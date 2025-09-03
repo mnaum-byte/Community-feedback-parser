@@ -451,7 +451,7 @@
         const section = document.getElementById(sectionId);
         if (section) modalBody.appendChild(section);
       }
-      try { mdDialog?.show(); } catch(_) { mdDialog?.open = true; }
+      try { if (mdDialog && typeof mdDialog.show === 'function') { mdDialog.show(); } else if (mdDialog) { mdDialog.open = true; } } catch(_) { if (mdDialog) mdDialog.open = true; }
     }
 
     function closeModal() {
@@ -461,7 +461,7 @@
       if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
       if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
       if (modalCurrent === 'filters') { modalBody.innerHTML = ''; }
-      try { mdDialog?.close(); } catch(_) { mdDialog?.open = false; }
+      try { if (mdDialog && typeof mdDialog.close === 'function') { mdDialog.close(); } else if (mdDialog) { mdDialog.open = false; } } catch(_) { if (mdDialog) mdDialog.open = false; }
       modalCurrent = null;
     }
     if (modalClose) modalClose.addEventListener('click', closeModal);
@@ -474,7 +474,7 @@
     function onKeydownGlobal(e){
       if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openFiltersModal(); }
-      if (modalOverlay && !modalOverlay.hasAttribute('hidden') && e.key === 'Tab') {
+      if (mdDialog && (mdDialog.open || mdDialog.hasAttribute && mdDialog.hasAttribute('open')) && e.key === 'Tab') {
         const focusables = modalRoot.querySelectorAll('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])');
         if (!focusables.length) return; const first = focusables[0]; const last = focusables[focusables.length - 1];
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
