@@ -217,7 +217,7 @@
       </div>
     </main>
     <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
-      <div class="modal" id="modal-root" role="document">
+      <div class="modal" id="modal-root" role="document" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-title" style="margin:0;">Results</h2>
           <div class="toolbar" id="modal-progress-wrap">
@@ -541,7 +541,8 @@
       else el('last-run-comments').textContent = `Last run: ${t}`;
       el('last-run').textContent = (kind === 'threads') ? `Last threads run: ${t} (${info})` : `Last comments run: ${t} (${info})`;
       const linkThreads = el('reopen-threads'); const linkComments = el('reopen-comments');
-      if (linkThreads) linkThreads.style.display = 'inline'; if (linkComments) linkComments.style.display = 'inline';
+      if (linkThreads) linkThreads.style.display = (kind === 'threads') ? 'inline' : 'none';
+      if (linkComments) linkComments.style.display = (kind === 'comments') ? 'inline' : 'none';
     }
 
     async function startParse() {
@@ -639,7 +640,7 @@
     function getSelectedCommentsRows(){
       const out = []; const rows = el('comments-body').querySelectorAll('tr');
       rows.forEach(tr=>{
-        const cid = tr.dataset.commentId; if (!cid || !selectedComments.has(cid)) return; const tds = tr.querySelectorAll('td'); if (tds.length<5) return; const body = tds[2].textContent||''; const linkEl = tds[3].querySelector('a'); const url = linkEl?linkEl.href:''; const why = tds[4].textContent||''; const threadTitle = linkEl?linkEl.textContent:''; out.push({ body, url, why, threadTitle });
+        const cid = tr.dataset.commentId; if (!cid || !selectedComments.has(cid)) return; const tds = tr.querySelectorAll('td'); if (tds.length<5) return; const body = tds[2].textContent||''; const linkEl = tds[3].querySelector('a'); const url = linkEl?linkEl.href:''; const why = tds[4].textContent||''; let threadTitle = tr.dataset.threadTitle || ''; if (!threadTitle && url) { const mt = relevantThreads.find(t=>t.url===url); if (mt) threadTitle = mt.title; } out.push({ body, url, why, threadTitle });
       });
       return out;
     }
@@ -650,6 +651,7 @@
     const btnConfigureFilters = document.getElementById('btn-configure-filters');
     function openFiltersModal(){ openModalWith('filters-section', 'Configure search filters'); }
     window.openFiltersModal = openFiltersModal;
+    if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', openFiltersModal);
 
     const modalProgress = document.getElementById('modal-progress');
     const modalStatus = document.getElementById('modal-status');
