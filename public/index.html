@@ -171,7 +171,6 @@
           <span id="comments-progress" class="progress"></span>
           <span id="comments-status" class="status"></span>
           <span id="comments-loader" class="loader">⏳</span>
-          <a id="reopen-comments" class="hint" href="#" style="display:none;">Reopen results</a>
           <span id="last-run-comments" class="hint"></span>
         </div>
       </div>
@@ -363,7 +362,7 @@
       [mk('Must', must), mk('Optional', opt), mk('Exclude', exc), mk('Feature', feat)].forEach(x => x && wrap.appendChild(x));
     }
 
-    function announce(msg) { const n = document.getElementById('sr-announce'); if (n) n.textContent = msg; }
+    function announce(msg) { /* no-op; remove screen reader announcements */ }
 
     // Modal refs and helpers
     const modalOverlay = el('modal-overlay');
@@ -664,7 +663,7 @@
     const btnClearFilters = document.getElementById('btn-clear-filters'); if (btnClearFilters) btnClearFilters.addEventListener('click', () => { ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>el(id).value=''); el('useSynonyms').checked = true; el('useSemantic').checked = false; saveFilters(); });
 
     const linkReopenThreads = el('reopen-threads'); if (linkReopenThreads) linkReopenThreads.addEventListener('click', (e)=>{ e.preventDefault(); modalCurrent='threads'; openModalWith('threads-section','Relevant Threads'); });
-    const linkReopenComments = el('reopen-comments'); if (linkReopenComments) linkReopenComments.addEventListener('click', (e)=>{ e.preventDefault(); modalCurrent='comments'; openModalWith('comments-section','User comments'); });
+    
   </script>
 </body>
 </html>
