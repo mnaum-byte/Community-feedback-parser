@@ -90,6 +90,8 @@
         .section.panel table td:nth-child(2) { width: 48px; max-width: 48px; text-align: right; padding-left: 8px; padding-right: 8px; }
         .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
         .toolbar .status, .toolbar .progress { margin-top: 0; }
+        .stack { display:flex; flex-direction:column; gap:8px; }
+        .sidebar .toolbar { justify-content:flex-start; }
         .ghost { opacity: .6; pointer-events: none; }
         .sr-announcer { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
         /* Why chips */
@@ -163,17 +165,17 @@
            <span id="last-run" class="hint"></span>
          </div>
        </div>
-       <div class="toolbar" style="justify-content:flex-start; margin: 8px 0 0 0;">
-         <button id="btn-configure-filters">Configure search filters</button>
-       </div>
-       <div class="extract-controls" style="display:flex; flex-direction:column; gap:8px; margin: 10px 0 0 0;">
-         <div class="toolbar" style="justify-content:flex-start;">
+       <div class="stack" style="margin: 8px 0 0 0;">
+         <div class="toolbar">
+           <button id="btn-configure-filters">Configure search filters</button>
+         </div>
+         <div class="toolbar">
            <button id="btn-parse">Extract Relevant Threads</button>
            <span id="parse-progress" class="progress"></span>
            <span id="parse-status" class="status"></span>
            <span id="parse-loader" class="loader">⏳</span>
          </div>
-         <div class="toolbar" style="justify-content:flex-start;">
+         <div class="toolbar">
            <button id="btn-extract">Extract User Comments</button>
            <span id="comments-progress" class="progress"></span>
            <span id="comments-status" class="status"></span>
