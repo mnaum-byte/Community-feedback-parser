@@ -313,12 +313,12 @@
         const raw = localStorage.getItem('uv_filters');
         if (!raw) { updateFiltersSummary(); updateButtonsEnabled(); return; }
         const f = JSON.parse(raw);
-        if (f.optional != null) el('optionalKeywords').value = f.optional;
-        if (f.must != null) el('mustKeywords').value = f.must;
-        if (f.exclude != null) el('excludeKeywords').value = f.exclude;
-        if (f.featureDef != null) el('featureDef').value = f.featureDef;
-        if (f.useSynonyms != null) el('useSynonyms').checked = !!f.useSynonyms;
-        if (f.useSemantic != null) el('useSemantic').checked = !!f.useSemantic;
+        const optEl = el('optionalKeywords'); if (optEl && f.optional != null) optEl.value = f.optional;
+        const mustEl = el('mustKeywords'); if (mustEl && f.must != null) mustEl.value = f.must;
+        const excEl = el('excludeKeywords'); if (excEl && f.exclude != null) excEl.value = f.exclude;
+        const featEl = el('featureDef'); if (featEl && f.featureDef != null) featEl.value = f.featureDef;
+        const synEl = document.getElementById('useSynonyms'); if (synEl && f.useSynonyms != null) { if ('selected' in synEl) synEl.selected = !!f.useSynonyms; else synEl.checked = !!f.useSynonyms; }
+        const semEl = document.getElementById('useSemantic'); if (semEl && f.useSemantic != null) { if ('selected' in semEl) semEl.selected = !!f.useSemantic; else semEl.checked = !!f.useSemantic; }
       } catch (_) {}
       updateFiltersSummary();
       updateButtonsEnabled();
@@ -373,10 +373,11 @@
       const wrapThreads = el('filters-summary-threads');
       const wrapComments = el('filters-summary-comments');
       if (!wrapThreads && !wrapComments) return;
-      const must = csvToArray(el('mustKeywords').value);
-      const opt = csvToArray(el('optionalKeywords').value);
-      const exc = csvToArray(el('excludeKeywords').value);
-      const feat = (el('featureDef').value || '').trim();
+      const q = readFiltersFromDOMOrStorage();
+      const must = q.must;
+      const opt = q.optional;
+      const exc = q.exclude;
+      const feat = q.featureDef || '';
       [wrapThreads, wrapComments].forEach(wrap=>{ if (!wrap) return; wrap.innerHTML = ''; });
       const mk = (label, arrOrStr) => {
         const val = Array.isArray(arrOrStr) ? arrOrStr.join(', ') : arrOrStr;
