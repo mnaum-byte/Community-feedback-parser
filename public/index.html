@@ -70,6 +70,7 @@
         .switch.on::after { left: 17px; background: #4f8cff; }
         .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
         .panel-footer { display:flex; justify-content:flex-end; align-items:center; margin-top: auto; padding-top: 12px; gap: 8px; }
+        .panel-footer.column-footer { flex-direction: column; align-items: flex-end; }
         /* New layout */
         .app { display:flex; flex-direction: column; gap: 24px; align-items: stretch; }
         .sidebar { flex: 0 0 auto; max-width: 100%; position: static; top: auto; height: auto; }
@@ -142,12 +143,17 @@
          <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
            <span id="last-run" class="hint"></span>
          </div>
-         <div class="panel-footer">
-           <span id="parse-progress" class="progress"></span>
-           <span id="parse-status" class="status"></span>
-           <span id="parse-loader" class="loader">⏳</span>
+         <div class="panel-footer column-footer">
            <div class="toolbar">
+             <span id="parse-progress" class="progress"></span>
+             <span id="parse-status" class="status"></span>
+             <span id="parse-loader" class="loader">⏳</span>
              <button id="btn-parse">Extract Relevant Threads</button>
+           </div>
+           <div class="toolbar">
+             <span id="comments-progress" class="progress"></span>
+             <span id="comments-status" class="status"></span>
+             <span id="comments-loader" class="loader">⏳</span>
              <button id="btn-extract">Extract User Comments</button>
            </div>
          </div>
@@ -185,11 +191,6 @@
            </thead>
           <tbody id="comments-body" aria-live="polite"><tr id="comments-empty"><td colspan="5" class="hint">No comments yet. Use “Extract User Comments”.</td></tr></tbody>
          </table>
-         <div class="panel-footer">
-           <span id="comments-progress" class="progress"></span>
-           <span id="comments-status" class="status"></span>
-           <span id="comments-loader" class="loader">⏳</span>
-         </div>
        </div>
      </main>
    </div>
