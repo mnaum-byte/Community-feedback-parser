@@ -498,10 +498,6 @@
      }
 
      async function startParse() {
-       el('parse-status').textContent = '';
-       el('parse-progress').textContent = '';
-       if (modalStatus) modalStatus.textContent = '';
-       if (modalProgress) modalProgress.textContent = '';
        const payload = buildQueryPayload();
        const currentKey = computeKey(payload.query);
        // If same query and job already running or completed, just reopen the modal
@@ -515,6 +511,11 @@
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
        // Starting a new job: clear previous results now
        clearThreads();
+       // Reset statuses/progress only for new job
+       el('parse-status').textContent = '';
+       el('parse-progress').textContent = '';
+       if (modalStatus) modalStatus.textContent = '';
+       if (modalProgress) modalProgress.textContent = '';
        modalCurrent = 'threads';
        openModalWith('threads-section', 'Relevant Threads');
        el('parse-loader').style.display = 'inline';
@@ -546,10 +547,6 @@
      }
 
      async function startExtract() {
-       el('comments-status').textContent = '';
-       el('comments-progress').textContent = '';
-       if (modalStatus) modalStatus.textContent = '';
-       if (modalProgress) modalProgress.textContent = '';
        const payload = buildQueryPayload();
        if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
        const threadsToUse = (selectedThreads.size ? relevantThreads.filter(t => selectedThreads.has(t.url)) : relevantThreads);
@@ -562,6 +559,11 @@
        if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
        // Starting a new job: clear previous results now
        clearComments();
+       // Reset statuses/progress only for new job
+       el('comments-status').textContent = '';
+       el('comments-progress').textContent = '';
+       if (modalStatus) modalStatus.textContent = '';
+       if (modalProgress) modalProgress.textContent = '';
        modalCurrent = 'comments';
        openModalWith('comments-section', 'User comments');
        el('comments-loader').style.display = 'inline';
