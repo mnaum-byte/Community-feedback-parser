@@ -457,8 +457,8 @@
       modalTitle.textContent = title;
       if (sectionId === 'filters-section') {
         mdDialog?.classList.remove('full');
-        mdDialog?.classList.remove('wide');
-        mdDialog?.classList.add('medium');
+        mdDialog?.classList.remove('medium');
+        mdDialog?.classList.add('wide');
         modalCurrent = 'filters';
         if (modalRoot) modalRoot.classList.add('compact');
         if (modalFooter) modalFooter.style.display = 'flex';
@@ -479,7 +479,7 @@
         if (modalBody) { modalBody.style.minWidth = ''; modalBody.style.width = ''; modalBody.style.maxWidth = ''; modalBody.style.minHeight = ''; }
         requestAnimationFrame(()=>{
           const cont = mdDialog?.shadowRoot?.querySelector('[part="container"]');
-          if (cont) { cont.style.width = 'clamp(720px, 84vw, 1200px)'; cont.style.maxHeight = '90vh'; cont.style.height='auto'; }
+          if (cont) { cont.style.width = 'clamp(1024px, 96vw, 1600px)'; cont.style.height='90vh'; cont.style.maxHeight='90vh'; }
         });
       } else {
         mdDialog?.classList.remove('medium');
