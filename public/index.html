@@ -201,6 +201,10 @@
           <div class="toolbar">
             <button id="btn-export-comments-csv" class="secondary">Export CSV</button>
             <button id="btn-export-comments-xlsx" class="secondary">Export XLSX</button>
+            <span id="comments-selected-count" class="hint"></span>
+            <button id="btn-copy-selected" class="secondary" disabled>Copy selected</button>
+            <button id="btn-export-selected-csv" class="secondary" disabled>Export selected CSV</button>
+            <button id="btn-export-selected-xlsx" class="secondary" disabled>Export selected XLSX</button>
           </div>
         </div>
         <table>
@@ -258,6 +262,7 @@
     let selectedThreads = new Set();
     let threadRowCount = 0;
     let commentRowCount = 0;
+    let selectedComments = new Set();
     let isAuthed = false;
     let sseParse = null;
     let sseComments = null;
@@ -436,7 +441,7 @@
 
     function clearComments() {
       el('comments-body').innerHTML = '<tr id="comments-empty"><td colspan="5" class="hint">No comments yet. Click “Find matching comments”.</td></tr>';
-      commentRowCount = 0;
+      commentRowCount = 0; selectedComments.clear(); updateSelectedCommentsUI();
     }
 
     function renderThread(row) {
@@ -492,8 +497,12 @@
       const empty = el('comments-empty'); if (empty) empty.remove();
       const tr = document.createElement('tr');
       tr.dataset.threadUrl = row.threadUrl || row.url;
+      const cid = 'c-' + (commentRowCount + 1);
+      tr.dataset.commentId = cid;
       const tdSel = document.createElement('td');
-      const cb = document.createElement('input'); cb.type = 'checkbox'; tdSel.appendChild(cb);
+      const cb = document.createElement('input'); cb.type = 'checkbox';
+      cb.addEventListener('change', () => { if (cb.checked) selectedComments.add(cid); else selectedComments.delete(cid); updateSelectedCommentsUI(); });
+      tdSel.appendChild(cb);
       const tdIdx = document.createElement('td'); tdIdx.textContent = String(++commentRowCount);
       const tdTitle = document.createElement('td'); tdTitle.textContent = row.body;
       const tdUrl = document.createElement('td'); const a = document.createElement('a'); a.href = row.threadUrl || row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Thread URL'; tdUrl.appendChild(a);
@@ -501,6 +510,12 @@
       tr.appendChild(tdSel); tr.appendChild(tdIdx); tr.appendChild(tdTitle); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
       el('comments-body').appendChild(tr);
       announce('Comment added');
+    }
+
+    function updateSelectedCommentsUI(){
+      const countEl = el('comments-selected-count'); const c = selectedComments.size; if (countEl) countEl.textContent = c ? `Selected: ${c}` : '';
+      const btnCopy = el('btn-copy-selected'); const btnCsv = el('btn-export-selected-csv'); const btnX = el('btn-export-selected-xlsx');
+      [btnCopy, btnCsv, btnX].forEach(b=>{ if (!b) return; b.disabled = c === 0; });
     }
 
     function formatWhy(text) {
@@ -609,7 +624,7 @@
     ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = el(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
 
     el('select-all').addEventListener('change', (ev)=>{ const checked = ev.target.checked; const rows = el('threads-body').querySelectorAll('input[type="checkbox"]'); rows.forEach(cb=>{ cb.checked = checked; const tr = cb.closest('tr'); if (!tr) return; const url = tr.dataset.threadUrl; if (checked) selectedThreads.add(url); else selectedThreads.delete(url); }); updateSelectionUI(); });
-    const selAllComments = el('select-all-comments'); if (selAllComments) selAllComments.addEventListener('change', (ev)=>{ const checked = ev.target.checked; const rows = el('comments-body').querySelectorAll('input[type="checkbox"]'); rows.forEach(cb=>{ cb.checked = checked; }); });
+    const selAllComments = el('select-all-comments'); if (selAllComments) selAllComments.addEventListener('change', (ev)=>{ const checked = ev.target.checked; const rows = el('comments-body').querySelectorAll('tr'); rows.forEach(tr=>{ const cb = tr.querySelector('input[type="checkbox"]'); if (!cb) return; cb.checked = checked; const cid = tr.dataset.commentId; if (!cid) return; if (checked) selectedComments.add(cid); else selectedComments.delete(cid); }); updateSelectedCommentsUI(); });
 
     el('btn-parse').addEventListener('click', startParse);
     el('btn-extract').addEventListener('click', startExtract);
@@ -617,6 +632,17 @@
     el('btn-export-threads-xlsx').addEventListener('click', exportThreadsXLSX);
     el('btn-export-comments-csv').addEventListener('click', exportCommentsCSV);
     el('btn-export-comments-xlsx').addEventListener('click', exportCommentsXLSX);
+    const btnCopySel = el('btn-copy-selected'); if (btnCopySel) btnCopySel.addEventListener('click', async ()=>{ const items = getSelectedCommentsRows(); if (!items.length) return; const text = items.map(i=>`"${i.body}" — ${i.threadTitle || 'Thread'} (${i.url})`).join('\n\n'); try { await navigator.clipboard.writeText(text); } catch(_) {} });
+    const btnExpSelCsv = el('btn-export-selected-csv'); if (btnExpSelCsv) btnExpSelCsv.addEventListener('click', ()=>{ const items = getSelectedCommentsRows(); if (!items.length) return; const rows = [['Comment','Thread Title','Thread URL','Why']]; items.forEach(i=>rows.push([i.body,i.threadTitle||'',i.url,i.why||''])); downloadCSV(rows,'selected-comments.csv'); });
+    const btnExpSelX = el('btn-export-selected-xlsx'); if (btnExpSelX) btnExpSelX.addEventListener('click', async ()=>{ const items = getSelectedCommentsRows(); if (!items.length) return; try { await ensureXLSX(); } catch(e) { alert('Could not load XLSX export library.'); return; } const wb=XLSX.utils.book_new(); const data=[['Comment','Thread Title','Thread URL','Why']]; items.forEach(i=>data.push([i.body,i.threadTitle||'',i.url,i.why||''])); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Selected'); XLSX.writeFile(wb,'selected-comments.xlsx'); });
+
+    function getSelectedCommentsRows(){
+      const out = []; const rows = el('comments-body').querySelectorAll('tr');
+      rows.forEach(tr=>{
+        const cid = tr.dataset.commentId; if (!cid || !selectedComments.has(cid)) return; const tds = tr.querySelectorAll('td'); if (tds.length<5) return; const body = tds[2].textContent||''; const linkEl = tds[3].querySelector('a'); const url = linkEl?linkEl.href:''; const why = tds[4].textContent||''; const threadTitle = linkEl?linkEl.textContent:''; out.push({ body, url, why, threadTitle });
+      });
+      return out;
+    }
 
     loadFilters();
     refreshAuth();
