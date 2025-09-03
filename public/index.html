@@ -326,6 +326,60 @@
 
      function announce(msg) { const n = document.getElementById('sr-announce'); if (n) n.textContent = msg; }
 
+     // Modal refs and helpers
+     const modalOverlay = el('modal-overlay');
+     const modalRoot = el('modal-root');
+     const modalTitle = el('modal-title');
+     const modalBody = el('modal-body');
+     const modalFooter = el('modal-footer');
+     const modalClose = el('modal-close');
+     let modalCurrent = null; // 'threads' | 'comments' | 'filters' | null
+
+     function openModalWith(sectionId, title) {
+       const section = document.getElementById(sectionId);
+       if (!section) return;
+       modalTitle.textContent = title;
+       if (sectionId === 'filters-section') {
+         modalCurrent = 'filters';
+         if (modalRoot) modalRoot.classList.add('compact');
+         if (modalFooter) modalFooter.style.display = 'flex';
+         modalBody.innerHTML = '';
+         Array.from(section.children).forEach(child => { child.style.display = ''; });
+         const frag = document.createDocumentFragment();
+         Array.from(section.children).forEach(child => frag.appendChild(child));
+         modalBody.appendChild(frag);
+       } else {
+         modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
+         if (modalRoot) modalRoot.classList.remove('compact');
+         if (modalFooter) modalFooter.style.display = 'none';
+         modalBody.innerHTML = '';
+         modalBody.appendChild(section);
+       }
+       modalOverlay.removeAttribute('hidden');
+       modalOverlay.classList.add('open');
+       modalOverlay.setAttribute('aria-hidden', 'false');
+     }
+
+     function closeModal() {
+       const content = document.querySelector('main.content');
+       const sidebar = document.getElementById('sidebar-panel');
+       const threadsSec = document.getElementById('threads-section');
+       const commentsSec = document.getElementById('comments-section');
+       const filtersSec = document.getElementById('filters-section');
+       if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
+       if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
+       if (sidebar && filtersSec && modalCurrent === 'filters') {
+         while (modalBody.firstChild) filtersSec.appendChild(modalBody.firstChild);
+         filtersSec.style.display = 'none';
+       }
+       modalOverlay.classList.remove('open');
+       modalOverlay.setAttribute('aria-hidden', 'true');
+       modalOverlay.setAttribute('hidden', '');
+       modalCurrent = null;
+     }
+     if (modalClose) modalClose.addEventListener('click', closeModal);
+     modalOverlay?.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeModal(); });
+
      function clearThreads() {
        el('threads-body').innerHTML = '<tr id="threads-empty"><td colspan="5" class="hint">No threads yet. Run “Extract Relevant Threads”.</td></tr>';
        relevantThreads = []; selectedThreads.clear(); threadRowCount = 0;
