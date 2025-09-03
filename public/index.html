@@ -100,7 +100,8 @@
         .stack { display:flex; flex-direction:column; gap:8px; }
         .sidebar .toolbar { justify-content:flex-start; }
         .ghost { opacity: .6; pointer-events: none; }
-        /* Filters now live inside md-dialog; no sidebar rendering */
+        /* Hide filters panel in sidebar until opened in modal */
+        #filters-section { display: none !important; }
         /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; pointer-events: none; }
         .modal-overlay.open { display: flex; pointer-events: auto; }
@@ -126,29 +127,31 @@
 
   <div class="app">
     <aside class="sidebar" id="sidebar-panel">
-      <div id="filters-section" class="panel filters">
-        <div>
-          <md-outlined-text-field id="optionalKeywords" label="Optional keywords (comma separated)" supporting-text="Any of these helps (broad)" style="width:100%" placeholder="e.g. pdf, export, caption"></md-outlined-text-field>
+      <template id="filters-template">
+        <div id="filters-section" class="panel filters">
+          <div>
+            <md-outlined-text-field id="optionalKeywords" label="Optional keywords (comma separated)" supporting-text="Any of these helps (broad)" style="width:100%" placeholder="e.g. pdf, export, caption"></md-outlined-text-field>
+          </div>
+          <div style="margin-top:12px;">
+            <md-outlined-text-field id="mustKeywords" label="Must-have keywords (comma separated)" supporting-text="All of these should be present (strict)" style="width:100%" placeholder="e.g. brand kit, styles, logo"></md-outlined-text-field>
+          </div>
+          <div style="margin-top:12px;">
+            <md-outlined-text-field id="excludeKeywords" label="Excluded keywords (comma separated)" supporting-text="Items containing any will be excluded" style="width:100%" placeholder="e.g. animation, video"></md-outlined-text-field>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="toggle" title="Adds domain synonyms (e.g., 'brand kit' → 'brand assets'). Increases recall."><md-switch id="useSynonyms" selected></md-switch><span>Expand with synonyms</span></div>
+          </div>
+          <div style="margin-top:12px;">
+            <md-outlined-text-field id="featureDef" label="Feature definition (1-3 sentences)" supporting-text="Used for semantic matching" type="textarea" rows="3" style="width:100%" placeholder="Describe the functionality/flow you care about..."></md-outlined-text-field>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="toggle" title="Uses embeddings to find semantically similar content; slower but more precise."><md-switch id="useSemantic"></md-switch><span>Use semantic matching</span></div>
+          </div>
+          <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
+            <span id="last-run" class="hint"></span>
+          </div>
         </div>
-        <div style="margin-top:12px;">
-          <md-outlined-text-field id="mustKeywords" label="Must-have keywords (comma separated)" supporting-text="All of these should be present (strict)" style="width:100%" placeholder="e.g. brand kit, styles, logo"></md-outlined-text-field>
-        </div>
-        <div style="margin-top:12px;">
-          <md-outlined-text-field id="excludeKeywords" label="Excluded keywords (comma separated)" supporting-text="Items containing any will be excluded" style="width:100%" placeholder="e.g. animation, video"></md-outlined-text-field>
-        </div>
-        <div style="margin-top:8px;">
-          <div class="toggle" title="Adds domain synonyms (e.g., 'brand kit' → 'brand assets'). Increases recall."><md-switch id="useSynonyms" selected></md-switch><span>Expand with synonyms</span></div>
-        </div>
-        <div style="margin-top:12px;">
-          <md-outlined-text-field id="featureDef" label="Feature definition (1-3 sentences)" supporting-text="Used for semantic matching" type="textarea" rows="3" style="width:100%" placeholder="Describe the functionality/flow you care about..."></md-outlined-text-field>
-        </div>
-        <div style="margin-top:8px;">
-          <div class="toggle" title="Uses embeddings to find semantically similar content; slower but more precise."><md-switch id="useSemantic"></md-switch><span>Use semantic matching</span></div>
-        </div>
-        <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
-          <span id="last-run" class="hint"></span>
-        </div>
-      </div>
+      </template>
       <div class="stack" style="margin: 8px 0 0 0;">
         <div class="toolbar">
           <button id="btn-configure-filters">Set search criteria</button>
@@ -335,18 +338,33 @@
       updateButtonsEnabled();
     }
 
-    function buildQueryPayload() {
-      return {
-        cookie: '',
-        query: {
-          must: csvToArray(el('mustKeywords').value),
-          optional: csvToArray(el('optionalKeywords').value),
-          exclude: csvToArray(el('excludeKeywords').value),
-          featureDef: el('featureDef').value.trim(),
-          useSynonyms: el('useSynonyms').checked,
-          useSemantic: el('useSemantic').checked
-        }
+    function readFiltersFromDOMOrStorage(){
+      const getVal = (id) => {
+        const domVal = document.getElementById(id)?.value;
+        if (domVal != null) return domVal;
+        const store = JSON.parse(localStorage.getItem('uv_filters') || '{}');
+        const key = id==='featureDef'?'featureDef':(id==='mustKeywords'?'must':id==='optionalKeywords'?'optional':id==='excludeKeywords'?'exclude':id);
+        return store[key] || '';
       };
+      const getBool = (id, key) => {
+        const el = document.getElementById(id);
+        if (el && 'selected' in el) return !!el.selected;
+        const f = JSON.parse(localStorage.getItem('uv_filters')||'{}');
+        return !!f[key];
+      };
+      return {
+        must: csvToArray(getVal('mustKeywords')),
+        optional: csvToArray(getVal('optionalKeywords')),
+        exclude: csvToArray(getVal('excludeKeywords')),
+        featureDef: String(getVal('featureDef')).trim(),
+        useSynonyms: getBool('useSynonyms','useSynonyms'),
+        useSemantic: getBool('useSemantic','useSemantic')
+      };
+    }
+
+    function buildQueryPayload() {
+      const q = readFiltersFromDOMOrStorage();
+      return { cookie: '', query: q };
     }
 
     function computeKey(obj) { try { return JSON.stringify(obj); } catch(_) { return String(obj); } }
@@ -370,10 +388,8 @@
     }
 
     function hasSearchCriteria(){
-      const must = csvToArray(el('mustKeywords').value);
-      const opt = csvToArray(el('optionalKeywords').value);
-      const feat = (el('featureDef').value || '').trim();
-      return must.length > 0 || opt.length > 0 || feat.length > 0;
+      const q = readFiltersFromDOMOrStorage();
+      return q.must.length > 0 || q.optional.length > 0 || q.featureDef.length > 0;
     }
 
     function updateButtonsEnabled(){
@@ -393,7 +409,7 @@
     let modalCurrent = null; // 'threads' | 'comments' | 'filters' | null
 
     function openModalWith(sectionId, title) {
-      const section = document.getElementById(sectionId);
+      let section = document.getElementById(sectionId);
       if (!section) return;
       modalTitle.textContent = title;
       if (sectionId === 'filters-section') {
@@ -674,7 +690,24 @@
     refreshAuth();
 
     const btnConfigureFilters = document.getElementById('btn-configure-filters');
-    function openFiltersModal(){ openModalWith('filters-section', 'Configure search filters'); }
+    function openFiltersModal(){
+      // Instantiate filters from template if not present
+      let filters = document.getElementById('filters-section');
+      if (!filters) {
+        const tpl = document.getElementById('filters-template');
+        if (tpl && tpl.content) {
+          const node = tpl.content.cloneNode(true);
+          // Append to sidebar (hidden) to keep IDs stable for query
+          document.getElementById('sidebar-panel').appendChild(node);
+          filters = document.getElementById('filters-section');
+          // Hydrate values from storage into M3 fields
+          try { const raw = localStorage.getItem('uv_filters'); if (raw) { const f = JSON.parse(raw); const setV=(id,v)=>{ const el=document.getElementById(id); if (el) el.value=v||''; }; setV('optionalKeywords', f.optional||''); setV('mustKeywords', f.must||''); setV('excludeKeywords', f.exclude||''); setV('featureDef', f.featureDef||''); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=!!f.useSynonyms; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=!!f.useSemantic; } } catch(_) {}
+          // Bind input listeners (once)
+          ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = document.getElementById(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
+        }
+      }
+      openModalWith('filters-section', 'Configure search filters');
+    }
     window.openFiltersModal = openFiltersModal;
     if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', openFiltersModal);
 
