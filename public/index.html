@@ -141,16 +141,12 @@
            <label class="toggle" title="Uses embeddings to find semantically similar content; slower but more precise."><span class="switch" id="toggle-sem"></span><span>Use semantic matching</span><input class="sr-only" type="checkbox" id="useSemantic" /></label>
          </div>
          <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
-           <button id="btn-reset" class="secondary">Reset filters</button>
            <span id="last-run" class="hint"></span>
          </div>
          <div class="panel-footer">
            <span id="parse-progress" class="progress"></span>
            <span id="parse-status" class="status"></span>
            <span id="parse-loader" class="loader">⏳</span>
-           <div class="toolbar">
-             <button id="btn-stop-parse" class="secondary ghost">Stop</button>
-           </div>
          </div>
        </div>
      </aside>
@@ -192,9 +188,6 @@
            <span id="comments-progress" class="progress"></span>
            <span id="comments-status" class="status"></span>
            <span id="comments-loader" class="loader">⏳</span>
-           <div class="toolbar">
-             <button id="btn-stop-comments" class="secondary ghost">Stop</button>
-           </div>
          </div>
        </div>
      </main>
@@ -413,7 +406,7 @@
        if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
        const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
-       el('parse-loader').style.display = 'inline'; el('btn-stop-parse').classList.remove('ghost');
+       el('parse-loader').style.display = 'inline';
        try {
          const res = await fetch('/api/parse/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
          const { jobId, error } = await res.json();
@@ -431,12 +424,12 @@
            const scanned = p.scannedThreads || 0; const total = p.totalThreads || 0; const rel = p.totalRelevant || 0;
            el('parse-progress').textContent = `Threads scanned: ${scanned}/${total} | Relevant: ${rel}`;
          });
-         sseParse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; sseParse.close(); el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); });
-         sseParse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; sseParse.close(); el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); setLastRun('threads', `${relevantThreads.length} found`); });
+         sseParse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; sseParse.close(); el('parse-loader').style.display = 'none'; });
+         sseParse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; sseParse.close(); el('parse-loader').style.display = 'none'; setLastRun('threads', `${relevantThreads.length} found`); });
        } catch (e) { el('parse-status').textContent = e.message; el('parse-status').className = 'status error'; el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); }
      }
 
-     function stopParse() { if (sseParse) { try { sseParse.close(); } catch(_){} } el('parse-status').textContent = 'Stopped'; el('btn-stop-parse').classList.add('ghost'); }
+     function stopParse() { if (sseParse) { try { sseParse.close(); } catch(_){} } el('parse-status').textContent = 'Stopped'; }
 
      async function startExtract() {
        clearComments();
@@ -446,7 +439,7 @@
        if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
        const threadsToUse = (selectedThreads.size ? relevantThreads.filter(t => selectedThreads.has(t.url)) : relevantThreads);
        if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
-       el('comments-loader').style.display = 'inline'; el('btn-stop-comments').classList.remove('ghost');
+       el('comments-loader').style.display = 'inline';
        try {
          const res = await fetch('/api/comments/start', { 
            method: 'POST', 
@@ -471,12 +464,12 @@
          });
          sseComments.addEventListener('threadNoMatches', (ev) => { const d = JSON.parse(ev.data); markThreadNote(d.threadUrl, 'No matches'); });
          sseComments.addEventListener('progress', (ev) => { const p = JSON.parse(ev.data); el('comments-progress').textContent = `Threads processed: ${p.threadIndex || 0} | Relevant: ${p.totalRelevant || 0}`; });
-         sseComments.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; sseComments.close(); el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); });
-         sseComments.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; sseComments.close(); el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); setLastRun('comments', `${el('comments-body').children.length} added`); });
+         sseComments.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; sseComments.close(); el('comments-loader').style.display = 'none'; });
+         sseComments.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; sseComments.close(); el('comments-loader').style.display = 'none'; setLastRun('comments', `${el('comments-body').children.length} added`); });
        } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); }
      }
 
-     function stopComments() { if (sseComments) { try { sseComments.close(); } catch(_){} } el('comments-status').textContent = 'Stopped'; el('btn-stop-comments').classList.add('ghost'); }
+     function stopComments() { if (sseComments) { try { sseComments.close(); } catch(_){} } el('comments-status').textContent = 'Stopped'; }
 
      // Exports
      let xlsxLoading = null;
@@ -594,14 +587,12 @@
      }
 
      el('btn-parse').addEventListener('click', startParse);
-     el('btn-stop-parse').addEventListener('click', stopParse);
      el('btn-extract').addEventListener('click', startExtract);
-     el('btn-stop-comments').addEventListener('click', stopComments);
      el('btn-export-threads-csv').addEventListener('click', exportThreadsCSV);
      el('btn-export-threads-xlsx').addEventListener('click', exportThreadsXLSX);
      el('btn-export-comments-csv').addEventListener('click', exportCommentsCSV);
      el('btn-export-comments-xlsx').addEventListener('click', exportCommentsXLSX);
-     el('btn-reset').addEventListener('click', ()=>{ ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>el(id).value=''); el('useSynonyms').checked=true; el('useSemantic').checked=false; saveFilters(); });
+     // removed Reset filters button
      const btnToggle = el('btn-toggle-sidebar');
      if (btnToggle) {
        btnToggle.addEventListener('click', () => {
