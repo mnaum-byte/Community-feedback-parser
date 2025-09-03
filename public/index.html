@@ -467,7 +467,26 @@
      function stopComments() { if (sseComments) { try { sseComments.close(); } catch(_){} } el('comments-status').textContent = 'Stopped'; el('btn-stop-comments').classList.add('ghost'); }
 
      // Exports
-     function exportThreadsCSV() {
+    let xlsxLoading = null;
+    function loadScript(src) { return new Promise((resolve, reject) => { const s=document.createElement('script'); s.src=src; s.async=true; s.onload=()=>resolve(); s.onerror=()=>reject(new Error('Failed to load '+src)); document.head.appendChild(s); }); }
+    async function ensureXLSX() {
+      if (window.XLSX) return;
+      if (!xlsxLoading) {
+        // Try fallback CDN if not already present
+        const fallbacks = [
+          'https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js',
+          'https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.mini.min.js'
+        ];
+        xlsxLoading = (async () => {
+          for (const url of fallbacks) {
+            try { await loadScript(url); if (window.XLSX) return; } catch(_) {}
+          }
+          if (!window.XLSX) throw new Error('XLSX library failed to load');
+        })();
+      }
+      return xlsxLoading;
+    }
+    function exportThreadsCSV() {
        if (!relevantThreads.length) return;
        const rows = [['#','Title','URL','Why']];
        relevantThreads.forEach((t,i)=>rows.push([i+1,t.title,t.url,t._why||'']));
@@ -488,8 +507,15 @@
        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
      }
-     function exportThreadsXLSX(){ if(!relevantThreads.length) return; const wb=XLSX.utils.book_new(); const data=[['#','Title','URL','Why']]; relevantThreads.forEach((t,i)=>data.push([i+1,t.title,t.url,t._why||''])); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Threads'); XLSX.writeFile(wb,'threads.xlsx'); }
-     function exportCommentsXLSX(){ const wb=XLSX.utils.book_new(); const data=[['Comment','Thread Title','Thread URL','Why']]; const trs=Array.from(el('comments-body').children); trs.forEach(tr=>{const tds=tr.querySelectorAll('td'); if(tds.length<3)return; const body=tds[0].textContent||''; const linkEl=tds[1].querySelector('a'); const title=linkEl?linkEl.textContent:''; const url=linkEl?linkEl.href:''; const why=tds[2].textContent||''; data.push([body,title,url,why]);}); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Comments'); XLSX.writeFile(wb,'comments.xlsx'); }
+     async function exportThreadsXLSX(){
+      if(!relevantThreads.length) return;
+      try { await ensureXLSX(); } catch(e) { alert('Could not load XLSX export library.'); return; }
+      const wb=XLSX.utils.book_new(); const data=[['#','Title','URL','Why']]; relevantThreads.forEach((t,i)=>data.push([i+1,t.title,t.url,t._why||''])); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Threads'); XLSX.writeFile(wb,'threads.xlsx');
+    }
+     async function exportCommentsXLSX(){
+      try { await ensureXLSX(); } catch(e) { alert('Could not load XLSX export library.'); return; }
+      const wb=XLSX.utils.book_new(); const data=[['Comment','Thread Title','Thread URL','Why']]; const trs=Array.from(el('comments-body').children); trs.forEach(tr=>{const tds=tr.querySelectorAll('td'); if(tds.length<3)return; const body=tds[0].textContent||''; const linkEl=tds[1].querySelector('a'); const title=linkEl?linkEl.textContent:''; const url=linkEl?linkEl.href:''; const why=tds[2].textContent||''; data.push([body,title,url,why]);}); const ws=XLSX.utils.aoa_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,'Comments'); XLSX.writeFile(wb,'comments.xlsx');
+    }
 
      // Ensure content min-height matches sidebar height
      function syncLayoutHeights() {
