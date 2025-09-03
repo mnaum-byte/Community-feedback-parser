@@ -704,7 +704,7 @@
      function openFiltersModal(){ openModalWith('filters-section', 'Configure search filters'); }
      // expose for any external callers
      window.openFiltersModal = openFiltersModal;
-
+ 
      const modalProgress = document.getElementById('modal-progress');
      const modalStatus = document.getElementById('modal-status');
      const modalLoader = document.getElementById('modal-loader');
@@ -713,6 +713,31 @@
      window.modalStatus = modalStatus;
      window.modalLoader = modalLoader;
 
+    const btnSaveFilters = document.getElementById('btn-save-filters');
+    if (btnSaveFilters) btnSaveFilters.addEventListener('click', (e) => {
+      e.preventDefault();
+      const opt = (el('optionalKeywords').value || '').trim();
+      const must = (el('mustKeywords').value || '').trim();
+      const exc = (el('excludeKeywords').value || '').trim();
+      const feat = (el('featureDef').value || '').trim();
+      const hasAny = !!(opt || must || exc || feat);
+      if (!hasAny) {
+        if (modalStatus) { modalStatus.textContent = 'Provide at least one keyword or a feature definition'; modalStatus.className = 'status error'; }
+        return;
+      }
+      try { saveFilters(); } catch(_) {}
+      if (modalStatus) { modalStatus.textContent = 'Saved'; modalStatus.className = 'status'; }
+      closeModal();
+    });
+    // Save on Enter key in any filters input while filters modal is open
+    const modalBodyEl = document.getElementById('modal-body');
+    if (modalBodyEl) modalBodyEl.addEventListener('keydown', (e) => {
+      if (modalCurrent === 'filters' && e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        e.preventDefault();
+        btnSaveFilters?.click();
+      }
+    });
+ 
      if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', openFiltersModal);
    </script>
  </body>
