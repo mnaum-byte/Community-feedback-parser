@@ -726,9 +726,17 @@
     window.modalProgress = modalProgress; window.modalStatus = modalStatus; window.modalLoader = modalLoader;
 
     const btnSaveFilters = document.getElementById('btn-save-filters'); const filtersErrorEl = document.getElementById('filters-error');
-    if (btnSaveFilters) btnSaveFilters.addEventListener('click', (e) => { e.preventDefault(); const opt = (document.getElementById('optionalKeywords')?.value || '').trim(); const must = (document.getElementById('mustKeywords')?.value || '').trim(); const exc = (document.getElementById('excludeKeywords')?.value || '').trim(); const feat = (document.getElementById('featureDef')?.value || '').trim(); const hasAny = !!(opt || must || exc || feat); if (!hasAny) { if (filtersErrorEl) { filtersErrorEl.textContent = 'Provide at least one keyword or a feature definition'; } return; } try { saveFilters(); } catch(_) {} if (filtersErrorEl) { filtersErrorEl.textContent = ''; } closeModal(); });
-    const modalBodyEl = document.getElementById('modal-body'); if (modalBodyEl) modalBodyEl.addEventListener('keydown', (e) => { if (modalCurrent === 'filters' && e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'MD-OUTLINED-TEXT-FIELD')) { e.preventDefault(); btnSaveFilters?.click(); } });
-    const btnClearFilters = document.getElementById('btn-clear-filters'); if (btnClearFilters) btnClearFilters.addEventListener('click', () => { ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const f=document.getElementById(id); if (f) f.value=''; }); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=true; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=false; saveFilters(); });
+    if (btnSaveFilters) btnSaveFilters.addEventListener('click', (e) => {
+      e.preventDefault();
+      const q = readFiltersFromDOMOrStorage();
+      const hasAny = !!(q.optional.length || q.must.length || q.exclude.length || q.featureDef);
+      if (!hasAny) { if (filtersErrorEl) filtersErrorEl.textContent = 'Provide at least one keyword or a feature definition'; return; }
+      try { saveFilters(); } catch(_) {}
+      if (filtersErrorEl) filtersErrorEl.textContent = '';
+      closeModal();
+    });
+    const modalBodyEl = document.getElementById('modal-body'); if (modalBodyEl) modalBodyEl.addEventListener('keydown', (e) => { if (modalCurrent === 'filters' && e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'MD-OUTLINED-TEXT-FIELD')) { e.preventDefault(); const q = readFiltersFromDOMOrStorage(); const hasAny = !!(q.optional.length || q.must.length || q.exclude.length || q.featureDef); if (!hasAny) { const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = 'Provide at least one keyword or a feature definition'; return; } btnSaveFilters?.click(); } });
+    const btnClearFilters = document.getElementById('btn-clear-filters'); if (btnClearFilters) btnClearFilters.addEventListener('click', () => { ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const f=document.getElementById(id); if (f) f.value=''; }); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=true; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=false; saveFilters(); updateFiltersSummary(); updateButtonsEnabled(); });
 
     const linkReopenThreads = el('reopen-threads'); if (linkReopenThreads) linkReopenThreads.addEventListener('click', (e)=>{ e.preventDefault(); modalCurrent='threads'; openModalWith('threads-section','Relevant Threads'); });
     
