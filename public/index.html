@@ -154,10 +154,10 @@
       </template>
       <div class="stack" style="margin: 8px 0 0 0;">
         <div class="toolbar">
-          <button id="btn-configure-filters">Set search criteria</button>
+          <md-filled-button id="btn-configure-filters">Set search criteria</md-filled-button>
         </div>
         <div class="toolbar">
-          <button id="btn-parse">Find relevant threads</button>
+          <md-filled-button id="btn-parse">Find relevant threads</md-filled-button>
           <span id="parse-progress" class="progress"></span>
           <span id="parse-status" class="status"></span>
           <span id="parse-loader" class="loader">⏳</span>
@@ -165,7 +165,7 @@
           <span id="last-run-threads" class="hint"></span>
         </div>
         <div class="toolbar">
-          <button id="btn-extract" disabled>Find matching comments</button>
+          <md-filled-button id="btn-extract" disabled>Find matching comments</md-filled-button>
           <span id="comments-progress" class="progress"></span>
           <span id="comments-status" class="status"></span>
           <span id="comments-loader" class="loader">⏳</span>
@@ -179,8 +179,8 @@
         <div class="toolbar" style="justify-content: space-between;">
           <h2>Relevant Threads <span id="selected-count" class="hint"></span></h2>
           <div class="toolbar">
-            <button id="btn-export-threads-csv" class="secondary">Export CSV</button>
-            <button id="btn-export-threads-xlsx" class="secondary">Export XLSX</button>
+            <md-outlined-button id="btn-export-threads-csv">Export CSV</md-outlined-button>
+            <md-outlined-button id="btn-export-threads-xlsx">Export XLSX</md-outlined-button>
           </div>
         </div>
         <div id="filters-summary-threads" class="chipset" aria-live="polite"></div>
@@ -197,12 +197,12 @@
         <div class="toolbar" style="justify-content: space-between;">
           <h2>User comments</h2>
           <div class="toolbar">
-            <button id="btn-export-comments-csv" class="secondary">Export CSV</button>
-            <button id="btn-export-comments-xlsx" class="secondary">Export XLSX</button>
+            <md-outlined-button id="btn-export-comments-csv">Export CSV</md-outlined-button>
+            <md-outlined-button id="btn-export-comments-xlsx">Export XLSX</md-outlined-button>
             <span id="comments-selected-count" class="hint"></span>
-            <button id="btn-copy-selected" class="secondary" disabled>Copy selected</button>
-            <button id="btn-export-selected-csv" class="secondary" disabled>Export selected CSV</button>
-            <button id="btn-export-selected-xlsx" class="secondary" disabled>Export selected XLSX</button>
+            <md-outlined-button id="btn-copy-selected" disabled>Copy selected</md-outlined-button>
+            <md-outlined-button id="btn-export-selected-csv" disabled>Export selected CSV</md-outlined-button>
+            <md-outlined-button id="btn-export-selected-xlsx" disabled>Export selected XLSX</md-outlined-button>
           </div>
         </div>
         <div id="filters-summary-comments" class="chipset" aria-live="polite"></div>
@@ -224,13 +224,13 @@
             <span id="modal-status" class="status"></span>
             <span id="modal-loader" class="loader">⏳</span>
           </div>
-          <button id="modal-close" class="modal-close">Close</button>
+          <md-outlined-button id="modal-close" class="modal-close">Close</md-outlined-button>
         </div>
         <div id="modal-body" class="modal-body"></div>
         <div id="modal-footer" class="modal-footer" style="display:none;">
           <span id="filters-error" class="status error" style="min-height:18px;"></span>
-          <button id="btn-clear-filters" class="secondary">Clear</button>
-          <button id="btn-save-filters">Save</button>
+          <md-outlined-button id="btn-clear-filters">Clear</md-outlined-button>
+          <md-filled-button id="btn-save-filters">Save</md-filled-button>
         </div>
       </div>
     </div>
