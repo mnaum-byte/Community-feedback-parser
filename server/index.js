@@ -41,6 +41,13 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// Serve XLSX bundle locally for reliable exports on localhost
+try {
+    const xlsxPath = require.resolve('xlsx/dist/xlsx.full.min.js');
+    app.get('/vendor/xlsx.full.min.js', (req, res) => {
+        res.sendFile(xlsxPath);
+    });
+} catch (_) {}
 
 async function probeCookie(uservoiceCookie) {
 	if (!uservoiceCookie) return { authenticated: false, reason: 'no_cookie' };

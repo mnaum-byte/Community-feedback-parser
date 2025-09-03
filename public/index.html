@@ -472,8 +472,9 @@
     async function ensureXLSX() {
       if (window.XLSX) return;
       if (!xlsxLoading) {
-        // Try fallback CDN if not already present
+        // Prefer local vendor route, then CDNs
         const fallbacks = [
+          '/vendor/xlsx.full.min.js',
           'https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js',
           'https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.mini.min.js'
         ];
