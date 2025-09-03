@@ -291,19 +291,7 @@
       }
     })();
 
-    // One-time migration: clear accidental 'select' placeholder values
-    (function migrateFiltersStorage(){
-      try {
-        const raw = localStorage.getItem('uv_filters'); if (!raw) return;
-        const f = JSON.parse(raw);
-        const isOnly = (v) => typeof v === 'string' && v.trim().toLowerCase() === 'select';
-        if (isOnly(f.optional)) f.optional = '';
-        if (isOnly(f.must)) f.must = '';
-        if (isOnly(f.exclude)) f.exclude = '';
-        if (isOnly(f.featureDef)) f.featureDef = '';
-        localStorage.setItem('uv_filters', JSON.stringify(f));
-      } catch(_) {}
-    })();
+    // Note: No migration that alters user-entered values
 
     async function refreshAuth() {
       try {
@@ -345,7 +333,7 @@
         if (!v && host && host.querySelector) { const n = host.querySelector('input, textarea'); if (n) v = n.value; }
         if (typeof v !== 'string') v = '';
         v = v.trim();
-        return v.toLowerCase() === 'select' ? '' : v;
+        return v;
       };
       const payload = {
         optional: readField('optionalKeywords'),
@@ -366,12 +354,12 @@
         if (host) {
           let v = host.value;
           if (!v && host.querySelector) { const n = host.querySelector('input, textarea'); if (n) v = n.value; }
-          if (typeof v === 'string') { const t = v.trim(); return t.toLowerCase() === 'select' ? '' : t; }
+          if (typeof v === 'string') { const t = v.trim(); return t; }
         }
         const store = JSON.parse(localStorage.getItem('uv_filters') || '{}');
         const key = id==='featureDef'?'featureDef':(id==='mustKeywords'?'must':id==='optionalKeywords'?'optional':id==='excludeKeywords'?'exclude':id);
         const val = (store[key] || '').trim();
-        return val.toLowerCase() === 'select' ? '' : val;
+        return val;
       };
       const getBool = (id, key) => {
         const el = document.getElementById(id);
