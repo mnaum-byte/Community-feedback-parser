@@ -18,16 +18,19 @@
             --accent: #4f8cff;
             --danger: #ff5c79;
         }
+        *, *::before, *::after { box-sizing: border-box; }
         html, body { height: 100%; }
         body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; color: var(--text); background: radial-gradient(1200px 800px at 50% -20%, #141924 0%, var(--bg) 50%); }
         .container { max-width: 980px; margin: 0 auto; padding: 24px; }
         h1 { font-size: 22px; margin: 0 0 8px 0; }
+        h2 { font-size: 16px; margin: 0 0 10px 0; color: var(--muted); }
         .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
         .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
         .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-        .row-col { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; }
+        .row-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .row-col > div { min-width: 0; }
         label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-        input, textarea { width: 100%; max-width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: #0f1319; }
+        input, textarea { width: 100%; max-width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: #0f1319; display: block; }
         textarea { min-height: 72px; }
         button { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
         button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
@@ -40,26 +43,29 @@
         .status.error { color: var(--danger); }
         .loader { display: none; margin-left: 8px; }
         .progress { font-size: 12px; color: var(--muted); }
-        .controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+        .controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
         .controls label { display: inline; margin: 0 6px 0 0; }
         .auth { display: flex; gap: 8px; align-items: center; }
+        .panel-footer { display:flex; justify-content:flex-end; align-items:center; margin-top: 12px; gap: 8px; }
         .badge { padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); font-size: 12px; color: var(--muted); }
         .badge.ok { color: #6de39b; border-color: #1f3a2b; background: #0e1f16; }
         .note { font-size: 12px; color: var(--muted); }
-        .envbar { display:flex; gap:12px; align-items:center; justify-content:flex-end; margin-bottom:8px; }
+        .footerbar { display:flex; gap:12px; align-items:center; justify-content:flex-end; margin-top: 16px; }
         .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); color: var(--muted); }
         .chip.prod { color:#6de39b; border-color:#1f3a2b; background:#0e1f16; }
+        .grid-3 { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .toggle { display:inline-flex; align-items:center; gap:8px; font-size: 13px; color: var(--text); }
+        .switch { position: relative; width: 36px; height: 22px; background: #1b2230; border:1px solid var(--border); border-radius: 999px; cursor: pointer; transition: background .2s ease; }
+        .switch::after { content: ""; position: absolute; top: 50%; left: 3px; transform: translateY(-50%); width: 16px; height: 16px; background: #8892a6; border-radius: 50%; transition: left .2s ease, background .2s ease; }
+        .switch.on { background: #183055; border-color: #2a4f8e; }
+        .switch.on::after { left: 17px; background: #4f8cff; }
+        .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
     </style>
  </head>
  <body>
    <div class="container">
-   <h1>UserVoice feedback extractor for Adobe Express</h1>
-   <div class="envbar">
-     <span id="env-chip" class="chip">env</span>
-     <span id="backend-chip" class="chip">backend</span>
-     <a id="logs-link" class="chip" href="#" target="_blank" rel="noopener" style="display:none;">Logs</a>
-   </div>
-   <div class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">https://adobeexpress.uservoice.com/forums/951181-adobe-express</a> )</div>
+   <h1>UserVoice feedback extractor for Adobe Express <span class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">uservoice forum</a> )</span></h1>
+
    <div class="section panel">
      <div class="auth">
        <button id="btn-auth" class="secondary">Sign in to UserVoice</button>
@@ -67,14 +73,28 @@
      </div>
      <div class="row-col" style="margin-top:12px;">
        <div>
+         <label>Browser Cookie (optional if signed in)</label>
+         <textarea id="cookie" placeholder="Paste cookie only if not signed in"></textarea>
+         <div class="hint">Server session cookie is used if signed in</div>
+       </div>
+     </div>
+   </div>
+
+   <div class="section panel">
+     <h2>Search topics</h2>
+     <div class="grid-3">
+       <div style="display:flex; flex-direction:column;">
          <label>Must-have keywords (comma separated)</label>
          <input id="mustKeywords" placeholder="e.g. brand kit, styles, logo" />
          <div class="hint">All of these should be present (strict)</div>
-       </div>
-       <div>
-         <label>Optional keywords (comma separated)</label>
-         <input id="optionalKeywords" placeholder="e.g. pdf, export, caption" />
-         <div class="hint">Any of these helps (broad)</div>
+         <div style="margin-top:12px;">
+           <label>Optional keywords (comma separated)</label>
+           <input id="optionalKeywords" placeholder="e.g. pdf, export, caption" />
+           <div class="hint">Any of these helps (broad)</div>
+         </div>
+         <div style="margin-top:auto; padding-top:8px;">
+           <label class="toggle"><span class="switch" id="toggle-syn"></span><span>Expand with synonyms</span><input class="sr-only" type="checkbox" id="useSynonyms" checked /></label>
+         </div>
        </div>
        <div>
          <label>Excluded keywords (comma separated)</label>
@@ -85,22 +105,16 @@
          <label>Feature definition (1-3 sentences)</label>
          <textarea id="featureDef" placeholder="Describe the functionality/flow you care about..."></textarea>
          <div class="hint">Used for semantic matching</div>
-       </div>
-       <div>
-         <label>Browser Cookie (optional if signed in)</label>
-         <textarea id="cookie" placeholder="Paste cookie only if not signed in"></textarea>
-         <div class="hint">Server session cookie is used if signed in</div>
+         <div style="margin-top:8px;">
+           <label class="toggle"><span class="switch" id="toggle-sem"></span><span>Use semantic matching</span><input class="sr-only" type="checkbox" id="useSemantic" /></label>
+         </div>
        </div>
      </div>
-     <div class="controls">
-       <label><input type="checkbox" id="useSynonyms" checked /> Expand with synonyms</label>
-       <label><input type="checkbox" id="useSemantic" /> Use semantic matching</label>
-     </div>
-     <div class="row" style="margin-top:10px; gap:8px;">
-       <button id="btn-parse">Parse Forum</button>
-       <span id="parse-loader" class="loader">⏳</span>
+     <div class="panel-footer">
        <span id="parse-progress" class="progress"></span>
        <span id="parse-status" class="status"></span>
+       <span id="parse-loader" class="loader">⏳</span>
+       <button id="btn-parse">Parse Forum</button>
      </div>
    </div>
 
@@ -112,11 +126,11 @@
        </thead>
        <tbody id="threads-body"></tbody>
      </table>
-     <div class="row" style="margin-top:10px; gap:8px;">
-       <button id="btn-extract" class="secondary">Extract user comments</button>
-       <span id="comments-loader" class="loader">⏳</span>
+     <div class="panel-footer">
        <span id="comments-progress" class="progress"></span>
        <span id="comments-status" class="status"></span>
+       <span id="comments-loader" class="loader">⏳</span>
+       <button id="btn-extract">Extract user comments</button>
      </div>
    </div>
 
@@ -129,6 +143,12 @@
        <tbody id="comments-body"></tbody>
      </table>
    </div>
+   </div>
+
+   <div class="container footerbar">
+     <span id="env-chip" class="chip">env</span>
+     <span id="backend-chip" class="chip">backend</span>
+     <a id="logs-link" class="chip" href="#" target="_blank" rel="noopener" style="display:none;">Logs</a>
    </div>
 
    <script>
@@ -146,7 +166,6 @@
        envChip.textContent = isProd ? 'production' : 'local';
        if (isProd) envChip.className = 'chip prod';
        backendChip.textContent = window.location.origin;
-       // If hosted on Render, show logs link
        if (/onrender\.com$/.test(window.location.hostname)) {
          logsLink.href = window.location.origin + '/health';
          logsLink.style.display = 'inline-block';
@@ -183,6 +202,26 @@
            useSemantic: el('useSemantic').checked
          }
        };
+     }
+
+     function bindToggle(switchEl, inputEl) {
+       const labelEl = inputEl.closest('label');
+       const sync = () => {
+         const on = !!inputEl.checked;
+         switchEl.classList.toggle('on', on);
+         switchEl.setAttribute('aria-checked', String(on));
+         switchEl.setAttribute('role', 'switch');
+       };
+       const handleClick = (ev) => {
+         ev.preventDefault();
+         ev.stopPropagation();
+         inputEl.checked = !inputEl.checked;
+         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+       };
+       if (labelEl) labelEl.addEventListener('click', handleClick);
+       switchEl.addEventListener('click', handleClick);
+       inputEl.addEventListener('change', sync);
+       sync();
      }
 
      function renderThread(row) {
@@ -304,10 +343,45 @@
      }
 
      function openAuth() {
-       // Open proxied forum page; user clicks Sign in there; session cookies are captured
-       window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
-       setTimeout(refreshAuth, 3000);
+       // Try to ask installed extension to sync cookie and adopt session
+       try {
+         let handledByExtension = false;
+         const extMsg = { type: 'UV_EXTENSION_SIGNIN', backend: window.location.origin };
+         window.postMessage(extMsg, '*');
+         const handler = (ev) => {
+           const d = ev.data || {};
+           if (d && d.type === 'UV_EXTENSION_SIGNIN_RESULT') {
+             handledByExtension = true;
+             window.removeEventListener('message', handler);
+             setTimeout(refreshAuth, 1500);
+           }
+         };
+         window.addEventListener('message', handler);
+         // Fallback after a generous timeout if no extension response
+         setTimeout(() => {
+           if (handledByExtension) return;
+           refreshAuth().then(() => {
+             if (!isAuthed) {
+               window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
+               setTimeout(refreshAuth, 3000);
+             }
+           });
+           window.removeEventListener('message', handler);
+         }, 7000);
+       } catch (_) {
+         // Fallback to proxy
+         window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
+         setTimeout(refreshAuth, 3000);
+       }
      }
+
+     // Bind custom toggles (init immediately since script is after HTML)
+     const synSwitch = document.getElementById('toggle-syn');
+     const synInput = document.getElementById('useSynonyms');
+     const semSwitch = document.getElementById('toggle-sem');
+     const semInput = document.getElementById('useSemantic');
+     if (synSwitch && synInput) bindToggle(synSwitch, synInput);
+     if (semSwitch && semInput) bindToggle(semSwitch, semInput);
 
      el('btn-auth').addEventListener('click', openAuth);
      el('btn-parse').addEventListener('click', startParse);
@@ -315,5 +389,5 @@
      refreshAuth();
    </script>
  </body>
- </html>
+</html>
 

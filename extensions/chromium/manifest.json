@@ -5,12 +5,28 @@
   "description": "Sync your adobeexpress.uservoice.com login cookie to the extractor backend.",
   "permissions": [
     "cookies",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://adobeexpress.uservoice.com/*",
     "https://*.uservoice.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://community-feedback-parser.onrender.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://community-feedback-parser.onrender.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
   ],
   "action": {
     "default_title": "UserVoice Cookie Sync",

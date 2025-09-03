@@ -15,16 +15,16 @@ const PORT = process.env.PORT || 3000;
 
 // Allow CORS for extension origins (and optionally any origin for auth endpoints)
 app.use(cors({
-    origin: function(origin, cb) {
-        // Allow requests with no origin (like curl) or our extension origins
-        if (!origin) return cb(null, true);
-        if (/^chrome-extension:/.test(origin) || /^moz-extension:/.test(origin)) return cb(null, true);
-        if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) return cb(null, true);
-        // Also allow our own origin
-        if (origin && process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) return cb(null, true);
-        return cb(null, true); // be permissive for now; lock down later
-    },
-    credentials: true
+	origin: function(origin, cb) {
+		// Allow requests with no origin (like curl) or our extension origins
+		if (!origin) return cb(null, true);
+		if (/^chrome-extension:/.test(origin) || /^moz-extension:/.test(origin)) return cb(null, true);
+		if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) return cb(null, true);
+		// Also allow our own origin
+		if (origin && process.env.RENDER_EXTERNAL_URL && origin === process.env.RENDER_EXTERNAL_URL) return cb(null, true);
+		return cb(null, true); // be permissive for now; lock down later
+	},
+	credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
 // Trust proxy for correct secure cookies behind reverse proxies (Render/Railway)
@@ -94,18 +94,22 @@ app.get('/auth/status', async (req, res) => {
 	res.json({ authenticated: result.authenticated, reason: result.reason });
 });
 
-app.use('/auth/proxy', createProxyMiddleware({
+// Dynamic host-aware proxy for *.uservoice.com
+app.use('/auth/proxy/_host/:host', createProxyMiddleware({
 	target: 'https://adobeexpress.uservoice.com',
 	changeOrigin: true,
 	ws: false,
 	followRedirects: true,
-	pathRewrite: { '^/auth/proxy': '' },
+	router: (req) => `https://${req.params.host}`,
+	pathRewrite: (path, req) => path.replace(new RegExp(`^/auth/proxy/_host/${req.params.host}`), ''),
 	onProxyRes: (proxyRes, req, res) => {
 		const loc = proxyRes.headers['location'];
-		if (loc && typeof loc === 'string' && loc.startsWith('https://adobeexpress.uservoice.com')) {
+		if (loc && typeof loc === 'string') {
 			try {
 				const u = new URL(loc);
-				proxyRes.headers['location'] = '/auth/proxy' + u.pathname + (u.search || '');
+				if (/\.uservoice\.com$/i.test(u.hostname)) {
+					proxyRes.headers['location'] = `/auth/proxy/_host/${u.hostname}${u.pathname}${u.search || ''}`;
+				}
 			} catch (_) {}
 		}
 		const setCookie = proxyRes.headers['set-cookie'];
@@ -119,9 +123,39 @@ app.use('/auth/proxy', createProxyMiddleware({
 		}
 	},
 	onProxyReq: (proxyReq, req, res) => {
-		if (req.session?.uservoiceCookie) {
-			proxyReq.setHeader('Cookie', req.session.uservoiceCookie);
+		if (req.session?.uservoiceCookie) proxyReq.setHeader('Cookie', req.session.uservoiceCookie);
+	},
+}));
+
+// Default proxy (entry point)
+app.use('/auth/proxy', createProxyMiddleware({
+	target: 'https://adobeexpress.uservoice.com',
+	changeOrigin: true,
+	ws: false,
+	followRedirects: true,
+	pathRewrite: { '^/auth/proxy': '' },
+	onProxyRes: (proxyRes, req, res) => {
+		const loc = proxyRes.headers['location'];
+		if (loc && typeof loc === 'string') {
+			try {
+				const u = new URL(loc);
+				if (/\.uservoice\.com$/i.test(u.hostname)) {
+					proxyRes.headers['location'] = `/auth/proxy/_host/${u.hostname}${u.pathname}${u.search || ''}`;
+				}
+			} catch (_) {}
 		}
+		const setCookie = proxyRes.headers['set-cookie'];
+		if (setCookie && setCookie.length) {
+			const pairs = setCookie.map(c => (c || '').split(';')[0]).filter(Boolean);
+			const prev = req.session.uservoiceCookie || '';
+			const mergedSet = new Set((prev ? prev.split('; ') : []).concat(pairs));
+			req.session.uservoiceCookie = Array.from(mergedSet).join('; ');
+			console.log('[auth] captured cookies:', req.session.uservoiceCookie);
+			try { req.session.save(() => {}); } catch (e) {}
+		}
+	},
+	onProxyReq: (proxyReq, req, res) => {
+		if (req.session?.uservoiceCookie) proxyReq.setHeader('Cookie', req.session.uservoiceCookie);
 	},
 }));
 
