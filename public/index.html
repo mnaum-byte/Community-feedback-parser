@@ -339,11 +339,19 @@
     }
 
     function saveFilters() {
+      const readField = (id) => {
+        const host = document.getElementById(id);
+        let v = host?.value;
+        if (!v && host && host.querySelector) { const n = host.querySelector('input, textarea'); if (n) v = n.value; }
+        if (typeof v !== 'string') v = '';
+        v = v.trim();
+        return v.toLowerCase() === 'select' ? '' : v;
+      };
       const payload = {
-        optional: (document.getElementById('optionalKeywords')?.value)||'',
-        must: (document.getElementById('mustKeywords')?.value)||'',
-        exclude: (document.getElementById('excludeKeywords')?.value)||'',
-        featureDef: (document.getElementById('featureDef')?.value)||'',
+        optional: readField('optionalKeywords'),
+        must: readField('mustKeywords'),
+        exclude: readField('excludeKeywords'),
+        featureDef: readField('featureDef'),
         useSynonyms: !!(document.getElementById('useSynonyms')?.selected),
         useSemantic: !!(document.getElementById('useSemantic')?.selected),
       };
@@ -354,12 +362,16 @@
 
     function readFiltersFromDOMOrStorage(){
       const getVal = (id) => {
-        const domVal = document.getElementById(id)?.value;
-        if (domVal != null) return domVal;
+        const host = document.getElementById(id);
+        if (host) {
+          let v = host.value;
+          if (!v && host.querySelector) { const n = host.querySelector('input, textarea'); if (n) v = n.value; }
+          if (typeof v === 'string') { const t = v.trim(); return t.toLowerCase() === 'select' ? '' : t; }
+        }
         const store = JSON.parse(localStorage.getItem('uv_filters') || '{}');
         const key = id==='featureDef'?'featureDef':(id==='mustKeywords'?'must':id==='optionalKeywords'?'optional':id==='excludeKeywords'?'exclude':id);
-        const val = store[key] || '';
-        return (typeof val === 'string' && val.trim().toLowerCase() === 'select') ? '' : val;
+        const val = (store[key] || '').trim();
+        return val.toLowerCase() === 'select' ? '' : val;
       };
       const getBool = (id, key) => {
         const el = document.getElementById(id);
