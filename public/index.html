@@ -410,7 +410,7 @@
 
     function updateButtonsEnabled(){
       const parseBtn = el('btn-parse');
-      if (parseBtn) parseBtn.disabled = !hasSearchCriteria();
+      if (parseBtn) parseBtn.disabled = (!hasSearchCriteria() && parseJobState !== 'running');
     }
 
     function announce(msg) { /* no-op; remove screen reader announcements */ }
@@ -733,7 +733,7 @@
       closeModal();
     });
     const modalBodyEl = document.getElementById('modal-body'); if (modalBodyEl) modalBodyEl.addEventListener('keydown', (e) => { if (modalCurrent === 'filters' && e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'MD-OUTLINED-TEXT-FIELD')) { e.preventDefault(); const q = readFiltersFromDOMOrStorage(); const hasAny = !!(q.optional.length || q.must.length || q.exclude.length || q.featureDef); if (!hasAny) { const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = 'Provide at least one keyword or a feature definition'; return; } btnSaveFilters?.click(); } });
-    const btnClearFilters = document.getElementById('btn-clear-filters'); if (btnClearFilters) btnClearFilters.addEventListener('click', () => { ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const f=document.getElementById(id); if (f) f.value=''; }); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=true; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=false; saveFilters(); updateFiltersSummary(); updateButtonsEnabled(); });
+    const btnClearFilters = document.getElementById('btn-clear-filters'); if (btnClearFilters) btnClearFilters.addEventListener('click', () => { ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const f=document.getElementById(id); if (f) f.value=''; }); const syn=document.getElementById('useSynonyms'); if (syn) syn.selected=true; const sem=document.getElementById('useSemantic'); if (sem) sem.selected=false; saveFilters(); updateFiltersSummary(); /* Keep parse button enabled if a parse job is running */ updateButtonsEnabled(); });
 
     const linkReopenThreads = el('reopen-threads'); if (linkReopenThreads) linkReopenThreads.addEventListener('click', (e)=>{ e.preventDefault(); modalCurrent='threads'; openModalWith('threads-section','Relevant Threads'); });
     
