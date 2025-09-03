@@ -123,7 +123,13 @@
         .modal.compact { width: min(720px, 92vw); height: auto; max-height: 80vh; }
         .modal.compact .modal-body { flex: 0 0 auto; padding: 16px; }
         /* md-dialog sizing per M3 patterns */
-        md-dialog::part(container) { background: var(--panel); border: 1px solid var(--border); }
+        md-dialog::part(container) {
+          background: var(--panel);
+          border: 1px solid var(--border);
+          /* Ensure a larger default width */
+          width: 1200px !important;
+          max-width: 98vw !important;
+        }
         /* Medium (wider) container for filters */
         md-dialog.medium::part(container) {
           width: 1200px !important;
@@ -487,23 +493,6 @@
         if (section) modalBody.appendChild(section);
       }
       try { if (mdDialog && typeof mdDialog.show === 'function') { mdDialog.show(); } else if (mdDialog) { mdDialog.open = true; } } catch(_) { if (mdDialog) mdDialog.open = true; }
-      // Ensure container sizing is applied after open
-      requestAnimationFrame(()=>{
-        const cont = mdDialog?.shadowRoot?.querySelector('[part="container"]');
-        if (!cont) return;
-        if (modalCurrent === 'filters') {
-          cont.style.width = '1200px';
-          cont.style.maxWidth = '98vw';
-          cont.style.minWidth = '960px';
-          cont.style.height = 'auto';
-          cont.style.maxHeight = '94vh';
-        } else {
-          cont.style.width = '1440px';
-          cont.style.maxWidth = '98vw';
-          cont.style.height = '90vh';
-          cont.style.maxHeight = '90vh';
-        }
-      });
     }
 
     function closeModal() {
