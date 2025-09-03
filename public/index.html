@@ -221,6 +221,7 @@
          </div>
          <div id="modal-body" class="modal-body"></div>
          <div id="modal-footer" class="modal-footer" style="display:none;">
+           <span id="filters-error" class="status error" style="min-height:18px;"></span>
            <button id="btn-save-filters">Save</button>
          </div>
        </div>
@@ -352,6 +353,7 @@
          if (modalFooter) modalFooter.style.display = 'flex';
          modalBody.innerHTML = '';
          Array.from(section.children).forEach(child => { child.style.display = ''; modalBody.appendChild(child); });
+         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
        } else {
          modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
          if (modalRoot) modalRoot.classList.remove('compact');
@@ -714,6 +716,7 @@
      window.modalLoader = modalLoader;
 
     const btnSaveFilters = document.getElementById('btn-save-filters');
+    const filtersErrorEl = document.getElementById('filters-error');
     if (btnSaveFilters) btnSaveFilters.addEventListener('click', (e) => {
       e.preventDefault();
       const opt = (el('optionalKeywords').value || '').trim();
@@ -722,11 +725,11 @@
       const feat = (el('featureDef').value || '').trim();
       const hasAny = !!(opt || must || exc || feat);
       if (!hasAny) {
-        if (modalStatus) { modalStatus.textContent = 'Provide at least one keyword or a feature definition'; modalStatus.className = 'status error'; }
+        if (filtersErrorEl) { filtersErrorEl.textContent = 'Provide at least one keyword or a feature definition'; }
         return;
       }
       try { saveFilters(); } catch(_) {}
-      if (modalStatus) { modalStatus.textContent = 'Saved'; modalStatus.className = 'status'; }
+      if (filtersErrorEl) { filtersErrorEl.textContent = ''; }
       closeModal();
     });
     // Save on Enter key in any filters input while filters modal is open
