@@ -498,7 +498,6 @@
      }
 
      async function startParse() {
-       clearThreads();
        el('parse-status').textContent = '';
        el('parse-progress').textContent = '';
        if (modalStatus) modalStatus.textContent = '';
@@ -514,6 +513,8 @@
        if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
        const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
+       // Starting a new job: clear previous results now
+       clearThreads();
        modalCurrent = 'threads';
        openModalWith('threads-section', 'Relevant Threads');
        el('parse-loader').style.display = 'inline';
@@ -545,7 +546,6 @@
      }
 
      async function startExtract() {
-       clearComments();
        el('comments-status').textContent = '';
        el('comments-progress').textContent = '';
        if (modalStatus) modalStatus.textContent = '';
@@ -560,6 +560,8 @@
          return;
        }
        if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
+       // Starting a new job: clear previous results now
+       clearComments();
        modalCurrent = 'comments';
        openModalWith('comments-section', 'User comments');
        el('comments-loader').style.display = 'inline';
