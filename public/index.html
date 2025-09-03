@@ -122,10 +122,12 @@
         .modal-footer { display:flex; justify-content:flex-end; gap:8px; padding: 10px 16px; border-top: 1px solid var(--border); }
         .modal.compact { width: min(720px, 92vw); height: auto; max-height: 80vh; }
         .modal.compact .modal-body { flex: 0 0 auto; padding: 16px; }
-        /* md-dialog sizing to match previous custom modal */
+        /* md-dialog sizing per M3 patterns */
         md-dialog::part(container) { background: var(--panel); border: 1px solid var(--border); }
-        md-dialog:not(.compact)::part(container) { width: min(1200px, 92vw); height: 90vh; max-height: 90vh; }
-        md-dialog.compact::part(container) { width: min(720px, 92vw); }
+        /* Medium container for filters */
+        md-dialog.medium::part(container) { width: min(560px, 92vw); max-height: 80vh; }
+        /* Full-screen container for results */
+        md-dialog.full::part(container) { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; }
         .chipset { display:flex; gap:6px; flex-wrap: wrap; margin-top: 6px; }
         .chipset .chip { border-color: var(--border); }
     </style>
@@ -227,7 +229,7 @@
         </table>
       </div>
     </main>
-    <md-dialog id="app-dialog">
+    <md-dialog id="app-dialog" class="medium">
       <div class="toolbar" id="modal-head" slot="headline" style="justify-content: space-between; gap: 12px; align-items: center;">
         <h2 id="modal-title" style="margin:0;">Results</h2>
         <div class="toolbar" id="modal-progress-wrap">
@@ -438,6 +440,8 @@
     function openModalWith(sectionId, title) {
       modalTitle.textContent = title;
       if (sectionId === 'filters-section') {
+        mdDialog?.classList.remove('full');
+        mdDialog?.classList.add('medium');
         modalCurrent = 'filters';
         if (modalRoot) modalRoot.classList.add('compact');
         if (modalFooter) modalFooter.style.display = 'flex';
@@ -456,6 +460,8 @@
         }
         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
       } else {
+        mdDialog?.classList.remove('medium');
+        mdDialog?.classList.add('full');
         modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
         if (modalRoot) modalRoot.classList.remove('compact');
         if (modalFooter) modalFooter.style.display = 'none';
