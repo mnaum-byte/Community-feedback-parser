@@ -122,6 +122,10 @@
         .modal-footer { display:flex; justify-content:flex-end; gap:8px; padding: 10px 16px; border-top: 1px solid var(--border); }
         .modal.compact { width: min(720px, 92vw); height: auto; max-height: 80vh; }
         .modal.compact .modal-body { flex: 0 0 auto; padding: 16px; }
+        /* md-dialog sizing to match previous custom modal */
+        md-dialog::part(container) { background: var(--panel); border: 1px solid var(--border); }
+        md-dialog:not(.compact)::part(container) { width: min(1200px, 92vw); height: 90vh; max-height: 90vh; }
+        md-dialog.compact::part(container) { width: min(720px, 92vw); }
         .chipset { display:flex; gap:6px; flex-wrap: wrap; margin-top: 6px; }
         .chipset .chip { border-color: var(--border); }
     </style>
