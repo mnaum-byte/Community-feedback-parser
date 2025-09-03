@@ -71,10 +71,10 @@
         .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
         .panel-footer { display:flex; justify-content:flex-end; align-items:center; margin-top: auto; padding-top: 12px; gap: 8px; }
         /* New layout */
-        .app { display:flex; gap: 24px; align-items: stretch; }
-        .sidebar { flex: 0 0 30%; max-width: 30%; position: sticky; top: 16px; height: fit-content; }
+        .app { display:flex; flex-direction: column; gap: 24px; align-items: stretch; }
+        .sidebar { flex: 0 0 auto; max-width: 100%; position: static; top: auto; height: auto; }
         .sidebar .panel > div:not(.panel-footer) { margin-top: 18px; }
-        .content { flex: 1 1 70%; max-width: 70%; display: flex; flex-direction: column; gap: 24px; align-items: stretch; }
+        .content { flex: 0 0 auto; max-width: 100%; display: flex; flex-direction: column; gap: 24px; align-items: stretch; }
         .content > .section.panel { width: 100%; flex: 0 0 auto; margin: 0; }
         .section.panel table { width: 100%; }
         .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
@@ -102,7 +102,6 @@
  <body>
    <div class="container">
    <h1>UserVoice feedback extractor for Adobe Express <span class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">uservoice forum</a> )</span>
-     <button id="btn-toggle-sidebar" class="secondary sidebar-toggle" aria-controls="sidebar-panel" aria-expanded="false">Filters</button>
    </h1>
 
    <div class="auth">
@@ -593,14 +592,7 @@
      el('btn-export-comments-csv').addEventListener('click', exportCommentsCSV);
      el('btn-export-comments-xlsx').addEventListener('click', exportCommentsXLSX);
      // removed Reset filters button
-     const btnToggle = el('btn-toggle-sidebar');
-     if (btnToggle) {
-       btnToggle.addEventListener('click', () => {
-         const show = !document.body.classList.contains('show-sidebar');
-         document.body.classList.toggle('show-sidebar', show);
-         btnToggle.setAttribute('aria-expanded', String(show));
-       });
-     }
+     // removed sidebar toggle in single-column layout
 
      loadFilters();
      refreshAuth();
