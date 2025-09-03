@@ -150,7 +150,7 @@
          </div>
        </div>
        <div class="toolbar" style="justify-content:flex-start; margin: 8px 0 0 0;">
-         <button id="btn-configure-filters" onclick="openFiltersModal()">Configure search filters</button>
+         <button id="btn-configure-filters">Configure search filters</button>
        </div>
        <div class="extract-controls" style="display:flex; flex-direction:column; gap:8px; margin: 10px 0 0 0;">
          <div class="toolbar" style="justify-content:flex-start;">
@@ -641,6 +641,21 @@
 
      loadFilters();
      refreshAuth();
+
+     const btnConfigureFilters = document.getElementById('btn-configure-filters');
+     function openFiltersModal(){ openModalWith('filters-section', 'Configure search filters'); }
+     // expose for any external callers
+     window.openFiltersModal = openFiltersModal;
+
+     const modalProgress = document.getElementById('modal-progress');
+     const modalStatus = document.getElementById('modal-status');
+     const modalLoader = document.getElementById('modal-loader');
+     // ensure globals exist to prevent ReferenceError in handlers
+     window.modalProgress = modalProgress;
+     window.modalStatus = modalStatus;
+     window.modalLoader = modalLoader;
+
+     if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', openFiltersModal);
    </script>
  </body>
 </html>
