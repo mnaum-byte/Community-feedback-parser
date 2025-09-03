@@ -21,11 +21,11 @@
         *, *::before, *::after { box-sizing: border-box; }
         html, body { height: 100%; }
         body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; color: var(--text); background: radial-gradient(1200px 800px at 50% -20%, #141924 0%, var(--bg) 50%); }
-        .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
         h1 { font-size: 22px; margin: 0 0 8px 0; }
         h2 { font-size: 16px; margin: 0 0 10px 0; color: var(--muted); }
-        .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; }
         .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
         .row-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         .row-col > div { min-width: 0; }
@@ -35,9 +35,11 @@
         button { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
         button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
         .hint { font-size: 12px; color: var(--muted); }
-        .section { margin-top: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px; font-size: 14px; vertical-align: top; }
+        .section { margin: 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px; font-size: 14px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+        td a { color: #8fb5ff; text-decoration: none; word-break: break-word; overflow-wrap: anywhere; }
+        td a:hover { text-decoration: underline; }
         th { color: var(--muted); font-weight: 600; background: #141923; }
         .status { margin-top: 10px; font-size: 13px; color: var(--muted); }
         .status.error { color: var(--danger); }
@@ -45,8 +47,7 @@
         .progress { font-size: 12px; color: var(--muted); }
         .controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
         .controls label { display: inline; margin: 0 6px 0 0; }
-        .auth { display: flex; gap: 8px; align-items: center; }
-        .panel-footer { display:flex; justify-content:flex-end; align-items:center; margin-top: 12px; gap: 8px; }
+        .auth { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin: 6px 0 10px 0; }
         .badge { padding: 2px 8px; border-radius: 999px; border:1px solid var(--border); font-size: 12px; color: var(--muted); }
         .badge.ok { color: #6de39b; border-color: #1f3a2b; background: #0e1f16; }
         .note { font-size: 12px; color: var(--muted); }
@@ -60,89 +61,101 @@
         .switch.on { background: #183055; border-color: #2a4f8e; }
         .switch.on::after { left: 17px; background: #4f8cff; }
         .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+        .panel-footer { display:flex; justify-content:flex-end; align-items:center; margin-top: auto; padding-top: 12px; gap: 8px; }
+        /* New layout */
+        .app { display:flex; gap: 24px; align-items: stretch; }
+        .sidebar { flex: 0 0 30%; max-width: 30%; position: sticky; top: 16px; height: fit-content; }
+        .sidebar .panel > div:not(.panel-footer) { margin-top: 18px; }
+        .content { flex: 1 1 70%; max-width: 70%; display: flex; flex-direction: column; gap: 24px; align-items: stretch; }
+        .content > .section.panel { width: 100%; flex: 1 1 0; min-height: 0; margin: 0; }
+        .section.panel { min-height: 0; }
+        .section.panel table { width: 100%; }
+        @media (max-width: 900px) {
+          .app { flex-direction: column; }
+          .sidebar, .content { max-width: 100%; flex-basis: auto; position: static; }
+        }
     </style>
  </head>
  <body>
    <div class="container">
    <h1>UserVoice feedback extractor for Adobe Express <span class="subtitle">( <a href="https://adobeexpress.uservoice.com/forums/951181-adobe-express" target="_blank" rel="noopener">uservoice forum</a> )</span></h1>
 
-   <div class="section panel">
-     <div class="auth">
-       <button id="btn-auth" class="secondary">Sign in to UserVoice</button>
-       <span id="auth-status" class="badge">Checking auth...</span>
-     </div>
-     <div class="row-col" style="margin-top:12px;">
-       <div>
-         <label>Browser Cookie (optional if signed in)</label>
-         <textarea id="cookie" placeholder="Paste cookie only if not signed in"></textarea>
-         <div class="hint">Server session cookie is used if signed in</div>
-       </div>
-     </div>
+   <div class="auth">
+     <span>Sign in status</span>
+     <span id="auth-status" class="badge">Checking auth...</span>
    </div>
 
-   <div class="section panel">
-     <h2>Search topics</h2>
-     <div class="grid-3">
-       <div style="display:flex; flex-direction:column;">
-         <label>Must-have keywords (comma separated)</label>
-         <input id="mustKeywords" placeholder="e.g. brand kit, styles, logo" />
-         <div class="hint">All of these should be present (strict)</div>
-         <div style="margin-top:12px;">
+   <div class="app">
+     <aside class="sidebar">
+       <div class="panel">
+         <h2>Search topics</h2>
+         <div>
            <label>Optional keywords (comma separated)</label>
            <input id="optionalKeywords" placeholder="e.g. pdf, export, caption" />
            <div class="hint">Any of these helps (broad)</div>
          </div>
-         <div style="margin-top:auto; padding-top:8px;">
+         <div style="margin-top:12px;">
+           <label>Must-have keywords (comma separated)</label>
+           <input id="mustKeywords" placeholder="e.g. brand kit, styles, logo" />
+           <div class="hint">All of these should be present (strict)</div>
+         </div>
+         <div style="margin-top:12px;">
+           <label>Excluded keywords (comma separated)</label>
+           <input id="excludeKeywords" placeholder="e.g. animation, video" />
+           <div class="hint">Items containing any will be excluded</div>
+         </div>
+         <div style="margin-top:8px;">
            <label class="toggle"><span class="switch" id="toggle-syn"></span><span>Expand with synonyms</span><input class="sr-only" type="checkbox" id="useSynonyms" checked /></label>
          </div>
-       </div>
-       <div>
-         <label>Excluded keywords (comma separated)</label>
-         <input id="excludeKeywords" placeholder="e.g. animation, video" />
-         <div class="hint">Items containing any will be excluded</div>
-       </div>
-       <div>
-         <label>Feature definition (1-3 sentences)</label>
-         <textarea id="featureDef" placeholder="Describe the functionality/flow you care about..."></textarea>
-         <div class="hint">Used for semantic matching</div>
+         <div style="margin-top:12px;">
+           <label>Feature definition (1-3 sentences)</label>
+           <textarea id="featureDef" placeholder="Describe the functionality/flow you care about..."></textarea>
+           <div class="hint">Used for semantic matching</div>
+         </div>
          <div style="margin-top:8px;">
            <label class="toggle"><span class="switch" id="toggle-sem"></span><span>Use semantic matching</span><input class="sr-only" type="checkbox" id="useSemantic" /></label>
          </div>
+         <div class="panel-footer">
+           <span id="parse-progress" class="progress"></span>
+           <span id="parse-status" class="status"></span>
+           <span id="parse-loader" class="loader">⏳</span>
+         </div>
        </div>
-     </div>
-     <div class="panel-footer">
-       <span id="parse-progress" class="progress"></span>
-       <span id="parse-status" class="status"></span>
-       <span id="parse-loader" class="loader">⏳</span>
-       <button id="btn-parse">Parse Forum</button>
-     </div>
-   </div>
+     </aside>
 
-   <div class="section panel">
-     <h2>Relevant Threads</h2>
-     <table>
-       <thead>
-         <tr><th>#</th><th>Title</th><th>URL</th><th>Why</th></tr>
-       </thead>
-       <tbody id="threads-body"></tbody>
-     </table>
-     <div class="panel-footer">
-       <span id="comments-progress" class="progress"></span>
-       <span id="comments-status" class="status"></span>
-       <span id="comments-loader" class="loader">⏳</span>
-       <button id="btn-extract">Extract user comments</button>
-     </div>
-   </div>
+     <main class="content">
+       <div class="section panel">
+         <h2>Relevant Threads</h2>
+         <table>
+           <thead>
+             <tr><th>#</th><th>Title</th><th>URL</th><th>Why</th></tr>
+           </thead>
+           <tbody id="threads-body"></tbody>
+         </table>
+         <div class="panel-footer">
+           <span id="parse-progress" class="progress"></span>
+           <span id="parse-status" class="status"></span>
+           <span id="parse-loader" class="loader">⏳</span>
+           <button id="btn-parse">Extract Relevant Threads</button>
+         </div>
+       </div>
 
-   <div class="section panel">
-     <h2>User comments</h2>
-     <table>
-       <thead>
-         <tr><th>Comment</th><th>Thread</th><th>Direct URL</th><th>Why</th></tr>
-       </thead>
-       <tbody id="comments-body"></tbody>
-     </table>
-   </div>
+       <div class="section panel">
+         <h2>User comments</h2>
+         <table>
+           <thead>
+            <tr><th>Comment</th><th>Thread URL</th><th>Why</th></tr>
+           </thead>
+           <tbody id="comments-body"></tbody>
+         </table>
+         <div class="panel-footer">
+           <span id="comments-progress" class="progress"></span>
+           <span id="comments-status" class="status"></span>
+           <span id="comments-loader" class="loader">⏳</span>
+           <button id="btn-extract">Extract User Comments</button>
+         </div>
+       </div>
+     </main>
    </div>
 
    <div class="container footerbar">
@@ -194,7 +207,7 @@
 
      function buildQueryPayload() {
        return {
-         cookie: isAuthed ? '' : el('cookie').value.trim(),
+         cookie: '',
          query: {
            must: csvToArray(el('mustKeywords').value),
            optional: csvToArray(el('optionalKeywords').value),
@@ -263,14 +276,12 @@
      function renderComment(row) {
        const tr = document.createElement('tr');
        const tdBody = document.createElement('td');
-       const tdThread = document.createElement('td');
-       const tdUrl = document.createElement('td');
+       const tdThreadUrl = document.createElement('td');
        const tdWhy = document.createElement('td');
        tdBody.textContent = row.body;
-       tdThread.textContent = row.threadTitle;
-       const a = document.createElement('a'); a.href = row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = row.url; tdUrl.appendChild(a);
+       const a = document.createElement('a'); a.href = row.threadUrl || row.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = row.threadTitle || 'Thread URL'; tdThreadUrl.appendChild(a);
        tdWhy.textContent = row._why || '';
-       tr.appendChild(tdBody); tr.appendChild(tdThread); tr.appendChild(tdUrl); tr.appendChild(tdWhy);
+       tr.appendChild(tdBody); tr.appendChild(tdThreadUrl); tr.appendChild(tdWhy);
        el('comments-body').appendChild(tr);
      }
 
@@ -281,7 +292,7 @@
        relevantThreads = [];
        threadRowCount = 0;
        const payload = buildQueryPayload();
-       if (!isAuthed && !payload.cookie) { el('parse-status').textContent = 'Sign in or provide cookie'; el('parse-status').className = 'status error'; return; }
+       if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
        const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
        el('parse-loader').style.display = 'inline';
@@ -313,7 +324,7 @@
        el('comments-status').textContent = '';
        el('comments-progress').textContent = '';
        const payload = buildQueryPayload();
-       if (!isAuthed && !payload.cookie) { el('comments-status').textContent = 'Sign in or provide cookie'; el('comments-status').className = 'status error'; return; }
+       if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
        if (relevantThreads.length === 0) { el('comments-status').textContent = 'Run Parse Forum first'; el('comments-status').className = 'status error'; return; }
        el('comments-loader').style.display = 'inline';
        try {
@@ -344,39 +355,6 @@
        } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; }
      }
 
-     function openAuth() {
-       // Try to ask installed extension to sync cookie and adopt session
-       try {
-         let handledByExtension = false;
-         const extMsg = { type: 'UV_EXTENSION_SIGNIN', backend: window.location.origin };
-         window.postMessage(extMsg, '*');
-         const handler = (ev) => {
-           const d = ev.data || {};
-           if (d && d.type === 'UV_EXTENSION_SIGNIN_RESULT') {
-             handledByExtension = true;
-             window.removeEventListener('message', handler);
-             setTimeout(refreshAuth, 1500);
-           }
-         };
-         window.addEventListener('message', handler);
-         // Fallback after a generous timeout if no extension response
-         setTimeout(() => {
-           if (handledByExtension) return;
-           refreshAuth().then(() => {
-             if (!isAuthed) {
-               window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
-               setTimeout(refreshAuth, 3000);
-             }
-           });
-           window.removeEventListener('message', handler);
-         }, 7000);
-       } catch (_) {
-         // Fallback to proxy
-         window.open('/auth/proxy/forums/951181-adobe-express', '_blank');
-         setTimeout(refreshAuth, 3000);
-       }
-     }
-
      // Bind custom toggles (init immediately since script is after HTML)
      const synSwitch = document.getElementById('toggle-syn');
      const synInput = document.getElementById('useSynonyms');
@@ -385,9 +363,19 @@
      if (synSwitch && synInput) bindToggle(synSwitch, synInput);
      if (semSwitch && semInput) bindToggle(semSwitch, semInput);
 
-     el('btn-auth').addEventListener('click', openAuth);
      el('btn-parse').addEventListener('click', startParse);
      el('btn-extract').addEventListener('click', startExtract);
+     // Ensure content min-height matches sidebar height
+     function syncLayoutHeights() {
+       const sidebar = document.querySelector('.sidebar');
+       const content = document.querySelector('.content');
+       if (sidebar && content) {
+         content.style.minHeight = sidebar.offsetHeight + 'px';
+       }
+     }
+     window.addEventListener('load', syncLayoutHeights);
+     window.addEventListener('resize', syncLayoutHeights);
+     setTimeout(syncLayoutHeights, 0);
      refreshAuth();
    </script>
  </body>
