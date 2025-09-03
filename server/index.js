@@ -47,6 +47,9 @@ try {
     app.get('/vendor/xlsx.full.min.js', (req, res) => {
         res.sendFile(xlsxPath);
     });
+    // Also expose the entire dist folder in case other assets are needed
+    const xlsxDistDir = path.dirname(xlsxPath);
+    app.use('/vendor', express.static(xlsxDistDir));
 } catch (_) {}
 
 async function probeCookie(uservoiceCookie) {
