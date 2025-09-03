@@ -83,6 +83,8 @@
         .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
         .ghost { opacity: .6; pointer-events: none; }
         .sr-announcer { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+        /* Hide filters panel in sidebar until opened in modal */
+        .sidebar .panel.filters { display: none; }
         /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal { width: min(1000px, 96vw); max-height: 90vh; height: 90vh; background: var(--panel); border:1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
@@ -120,7 +122,7 @@
 
    <div class="app">
      <aside class="sidebar" id="sidebar-panel">
-       <div class="panel">
+       <div id="filters-section" class="panel filters">
          <h2>Search topics</h2>
          <div>
            <label>Optional keywords (comma separated)</label>
@@ -151,21 +153,24 @@
          <div class="toolbar" style="justify-content: space-between; margin-top: 10px;">
            <span id="last-run" class="hint"></span>
          </div>
-      </div>
-      <div class="extract-controls" style="display:flex; flex-direction:column; gap:8px; margin: 10px 0 0 0;">
-        <div class="toolbar" style="justify-content:flex-start;">
-          <button id="btn-parse">Extract Relevant Threads</button>
-          <span id="parse-progress" class="progress"></span>
-          <span id="parse-status" class="status"></span>
-          <span id="parse-loader" class="loader">⏳</span>
-        </div>
-        <div class="toolbar" style="justify-content:flex-start;">
-          <button id="btn-extract">Extract User Comments</button>
-          <span id="comments-progress" class="progress"></span>
-          <span id="comments-status" class="status"></span>
-          <span id="comments-loader" class="loader">⏳</span>
-        </div>
-      </div>
+       </div>
+       <div class="toolbar" style="justify-content:flex-start; margin: 8px 0 0 0;">
+         <button id="btn-configure-filters" class="secondary">Configure search filters</button>
+       </div>
+       <div class="extract-controls" style="display:flex; flex-direction:column; gap:8px; margin: 10px 0 0 0;">
+         <div class="toolbar" style="justify-content:flex-start;">
+           <button id="btn-parse">Extract Relevant Threads</button>
+           <span id="parse-progress" class="progress"></span>
+           <span id="parse-status" class="status"></span>
+           <span id="parse-loader" class="loader">⏳</span>
+         </div>
+         <div class="toolbar" style="justify-content:flex-start;">
+           <button id="btn-extract">Extract User Comments</button>
+           <span id="comments-progress" class="progress"></span>
+           <span id="comments-status" class="status"></span>
+           <span id="comments-loader" class="loader">⏳</span>
+         </div>
+       </div>
      </aside>
 
      <main class="content" style="display:none;">
@@ -632,6 +637,7 @@
       const modalStatus = document.getElementById('modal-status');
       const modalLoader = document.getElementById('modal-loader');
       let modalCurrent = null; // 'threads' | 'comments' | null
+      const btnConfigureFilters = document.getElementById('btn-configure-filters');
 
       function openModalWith(sectionId, title) {
         const section = document.getElementById(sectionId);
@@ -646,11 +652,15 @@
       function closeModal() {
         // Move sections back to hidden content container
         const content = document.querySelector('main.content');
+        const sidebar = document.getElementById('sidebar-panel');
         if (content && document.getElementById('threads-section') && !content.contains(document.getElementById('threads-section'))) {
           content.appendChild(document.getElementById('threads-section'));
         }
         if (content && document.getElementById('comments-section') && !content.contains(document.getElementById('comments-section'))) {
           content.appendChild(document.getElementById('comments-section'));
+        }
+        if (sidebar && document.getElementById('filters-section') && !sidebar.contains(document.getElementById('filters-section'))) {
+          sidebar.insertBefore(document.getElementById('filters-section'), sidebar.querySelector('.extract-controls'));
         }
         modalOverlay.style.display = 'none';
         modalOverlay.setAttribute('aria-hidden', 'true');
@@ -659,6 +669,7 @@
         if (modalStatus) modalStatus.textContent = '';
         if (modalLoader) modalLoader.style.display = 'none';
       }
+      if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', () => { modalCurrent = 'filters'; openModalWith('filters-section', 'Configure search filters'); });
       if (modalClose) modalClose.addEventListener('click', closeModal);
       modalOverlay?.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeModal(); });
 
