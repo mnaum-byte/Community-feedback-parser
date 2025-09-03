@@ -706,10 +706,13 @@
           ['optionalKeywords','mustKeywords','excludeKeywords','featureDef'].forEach(id=>{ const e = document.getElementById(id); if (!e) return; e.addEventListener('input', () => saveFilters()); });
         }
       }
-      openModalWith('filters-section', 'Configure search filters');
+      // Defer modal open to ensure elements are connected
+      requestAnimationFrame(()=>openModalWith('filters-section', 'Configure search filters'));
     }
     window.openFiltersModal = openFiltersModal;
     if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', openFiltersModal);
+    // Extra safety: delegate click in case direct binding missed
+    document.addEventListener('click', (e)=>{ const t = e.target && (e.target.id==='btn-configure-filters' ? e.target : e.target.closest && e.target.closest('#btn-configure-filters')); if (t) { e.preventDefault(); openFiltersModal(); } });
 
     const modalProgress = document.getElementById('modal-progress');
     const modalStatus = document.getElementById('modal-status');
