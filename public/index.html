@@ -83,6 +83,12 @@
         .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
         .ghost { opacity: .6; pointer-events: none; }
         .sr-announcer { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { width: min(1000px, 96vw); max-height: 90vh; background: var(--panel); border:1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom:1px solid var(--border); }
+        .modal-body { padding: 12px 16px; overflow: auto; }
+        .modal-close { border:1px solid var(--border); background: transparent; color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
         /* Why chips */
         .why { display:flex; flex-wrap: wrap; gap:6px; }
         .why .chip { border-color: var(--why-border); background: var(--why-bg); color: var(--muted); }
@@ -148,12 +154,14 @@
          <div class="panel-footer column-footer">
            <div class="toolbar">
              <button id="btn-parse">Extract Relevant Threads</button>
+             <button id="btn-view-threads" class="secondary">View Results</button>
              <span id="parse-progress" class="progress"></span>
              <span id="parse-status" class="status"></span>
              <span id="parse-loader" class="loader">⏳</span>
            </div>
            <div class="toolbar">
              <button id="btn-extract">Extract User Comments</button>
+             <button id="btn-view-comments" class="secondary">View Results</button>
              <span id="comments-progress" class="progress"></span>
              <span id="comments-status" class="status"></span>
              <span id="comments-loader" class="loader">⏳</span>
@@ -162,8 +170,8 @@
        </div>
      </aside>
 
-     <main class="content">
-       <div class="section panel">
+     <main class="content" style="display:none;">
+       <div id="threads-section" class="section panel">
          <div class="toolbar" style="justify-content: space-between;">
            <h2>Relevant Threads <span id="selected-count" class="hint"></span></h2>
            <div class="toolbar">
@@ -179,7 +187,7 @@
          </table>
        </div>
 
-       <div class="section panel">
+       <div id="comments-section" class="section panel">
          <div class="toolbar" style="justify-content: space-between;">
            <h2>User comments</h2>
            <div class="toolbar">
@@ -195,6 +203,15 @@
          </table>
        </div>
      </main>
+     <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+       <div class="modal" role="document">
+         <div class="modal-header">
+           <h2 id="modal-title" style="margin:0;">Results</h2>
+           <button id="modal-close" class="modal-close">Close</button>
+         </div>
+         <div id="modal-body" class="modal-body"></div>
+       </div>
+     </div>
    </div>
 
    <div class="container footerbar">
@@ -592,6 +609,40 @@
 
      el('btn-parse').addEventListener('click', startParse);
      el('btn-extract').addEventListener('click', startExtract);
+     const btnViewThreads = el('btn-view-threads');
+     const btnViewComments = el('btn-view-comments');
+     const modalOverlay = el('modal-overlay');
+     const modalBody = document.getElementById('modal-body');
+     const modalTitle = document.getElementById('modal-title');
+     const modalClose = document.getElementById('modal-close');
+
+     function openModalWith(sectionId, title) {
+       const section = document.getElementById(sectionId);
+       if (!section) return;
+       modalTitle.textContent = title;
+       // Move section into modal body
+       modalBody.innerHTML = '';
+       modalBody.appendChild(section);
+       modalOverlay.style.display = 'flex';
+       modalOverlay.setAttribute('aria-hidden', 'false');
+     }
+     function closeModal() {
+       // Move sections back to hidden content container
+       const content = document.querySelector('main.content');
+       if (content && document.getElementById('threads-section') && !content.contains(document.getElementById('threads-section'))) {
+         content.appendChild(document.getElementById('threads-section'));
+       }
+       if (content && document.getElementById('comments-section') && !content.contains(document.getElementById('comments-section'))) {
+         content.appendChild(document.getElementById('comments-section'));
+       }
+       modalOverlay.style.display = 'none';
+       modalOverlay.setAttribute('aria-hidden', 'true');
+     }
+     if (btnViewThreads) btnViewThreads.addEventListener('click', ()=>openModalWith('threads-section', 'Relevant Threads'));
+     if (btnViewComments) btnViewComments.addEventListener('click', ()=>openModalWith('comments-section', 'User comments'));
+     if (modalClose) modalClose.addEventListener('click', closeModal);
+     modalOverlay?.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeModal(); });
+
      el('btn-export-threads-csv').addEventListener('click', exportThreadsCSV);
      el('btn-export-threads-xlsx').addEventListener('click', exportThreadsXLSX);
      el('btn-export-comments-csv').addEventListener('click', exportCommentsCSV);
