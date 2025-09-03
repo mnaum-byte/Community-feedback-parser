@@ -129,24 +129,19 @@
         }
         /* Medium (wider) container for filters */
         md-dialog.medium::part(container) {
-          width: 800px !important;
-          max-width: 98vw !important;
-          min-width: 720px !important;
-          inline-size: 800px !important;
-          max-inline-size: 98vw !important;
-          min-inline-size: 720px !important;
-          max-height: 94vh !important;
+          width: clamp(720px, 84vw, 1200px) !important;
+          max-height: 90vh !important;
           height: auto !important;
         }
         /* Wide container for results */
         md-dialog.wide::part(container) {
-          width: 1440px !important;
-          max-width: 98vw !important;
-          inline-size: 1440px !important;
-          max-inline-size: 98vw !important;
+          width: clamp(960px, 96vw, 1440px) !important;
           height: 90vh !important;
           max-height: 90vh !important;
         }
+        /* Prevent long validation text from forcing width growth */
+        #modal-footer { flex-wrap: wrap; }
+        #filters-error { white-space: normal; word-break: break-word; }
         .chipset { display:flex; gap:6px; flex-wrap: wrap; margin-top: 6px; }
         .chipset .chip { border-color: var(--border); }
     </style>
