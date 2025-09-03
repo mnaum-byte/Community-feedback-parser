@@ -422,8 +422,6 @@
       }
 
       async function startParse() {
-        modalCurrent = 'threads';
-        openModalWith('threads-section', 'Relevant Threads');
         clearThreads();
         el('parse-status').textContent = '';
         el('parse-progress').textContent = '';
@@ -433,6 +431,8 @@
         if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
         const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
         if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
+        modalCurrent = 'threads';
+        openModalWith('threads-section', 'Relevant Threads');
         el('parse-loader').style.display = 'inline';
         if (modalLoader) modalLoader.style.display = 'inline';
         try {
@@ -462,8 +462,6 @@
       function stopParse() { if (sseParse) { try { sseParse.close(); } catch(_){} } el('parse-status').textContent = 'Stopped'; }
 
       async function startExtract() {
-        modalCurrent = 'comments';
-        openModalWith('comments-section', 'User comments');
         clearComments();
         el('comments-status').textContent = '';
         el('comments-progress').textContent = '';
@@ -473,6 +471,8 @@
         if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
         const threadsToUse = (selectedThreads.size ? relevantThreads.filter(t => selectedThreads.has(t.url)) : relevantThreads);
         if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
+        modalCurrent = 'comments';
+        openModalWith('comments-section', 'User comments');
         el('comments-loader').style.display = 'inline';
         if (modalLoader) modalLoader.style.display = 'inline';
         try {
