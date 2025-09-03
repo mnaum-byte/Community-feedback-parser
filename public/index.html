@@ -256,6 +256,10 @@
      let isAuthed = false;
      let sseParse = null;
      let sseComments = null;
+     let parseJobState = 'idle'; // idle | running | completed | error
+     let parseLastKey = '';
+     let commentsJobState = 'idle'; // idle | running | completed | error
+     let commentsLastKey = '';
 
      // Production chip and backend info
      (function setEnvChips(){
@@ -331,6 +335,8 @@
          }
        };
      }
+
+     function computeKey(obj) { try { return JSON.stringify(obj); } catch(_) { return String(obj); } }
 
      function announce(msg) { const n = document.getElementById('sr-announce'); if (n) n.textContent = msg; }
 
@@ -498,6 +504,13 @@
        if (modalStatus) modalStatus.textContent = '';
        if (modalProgress) modalProgress.textContent = '';
        const payload = buildQueryPayload();
+       const currentKey = computeKey(payload.query);
+       // If same query and job already running or completed, just reopen the modal
+       if ((parseJobState === 'running' || parseJobState === 'completed') && parseLastKey === currentKey) {
+         modalCurrent = 'threads';
+         openModalWith('threads-section', 'Relevant Threads');
+         return;
+       }
        if (!isAuthed) { el('parse-status').textContent = 'Please sign in'; el('parse-status').className = 'status error'; return; }
        const hasAny = (payload.query.must.length + payload.query.optional.length) > 0 || payload.query.featureDef.length > 0;
        if (!hasAny) { el('parse-status').textContent = 'Provide at least one keyword or a feature definition'; el('parse-status').className = 'status error'; return; }
@@ -506,6 +519,8 @@
        el('parse-loader').style.display = 'inline';
        if (modalLoader) modalLoader.style.display = 'inline';
        try {
+         parseJobState = 'running';
+         parseLastKey = currentKey;
          const res = await fetch('/api/parse/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
          const { jobId, error } = await res.json();
          if (!res.ok) throw new Error(error || 'Failed to start parse job');
@@ -524,8 +539,8 @@
            el('parse-progress').textContent = `Threads scanned: ${scanned}/${total} | Relevant: ${rel}`;
            if (modalCurrent === 'threads' && modalProgress) modalProgress.textContent = el('parse-progress').textContent;
          });
-         sseParse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; if (modalCurrent === 'threads' && modalStatus) modalStatus.textContent = msg; sseParse.close(); el('parse-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; });
-         sseParse.addEventListener('done', () => { el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; if (modalCurrent === 'threads' && modalStatus) modalStatus.textContent = 'Completed'; sseParse.close(); el('parse-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; setLastRun('threads', `${relevantThreads.length} found`); });
+         sseParse.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; parseJobState = 'error'; el('parse-status').textContent = msg; el('parse-status').className = 'status error'; if (modalCurrent === 'threads' && modalStatus) modalStatus.textContent = msg; sseParse.close(); el('parse-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; });
+         sseParse.addEventListener('done', () => { parseJobState = 'completed'; el('parse-status').textContent = 'Completed'; el('parse-status').className = 'status'; if (modalCurrent === 'threads' && modalStatus) modalStatus.textContent = 'Completed'; sseParse.close(); el('parse-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; setLastRun('threads', `${relevantThreads.length} found`); });
        } catch (e) { el('parse-status').textContent = e.message; el('parse-status').className = 'status error'; el('parse-loader').style.display = 'none'; el('btn-stop-parse').classList.add('ghost'); }
      }
 
@@ -538,12 +553,20 @@
        const payload = buildQueryPayload();
        if (!isAuthed) { el('comments-status').textContent = 'Please sign in'; el('comments-status').className = 'status error'; return; }
        const threadsToUse = (selectedThreads.size ? relevantThreads.filter(t => selectedThreads.has(t.url)) : relevantThreads);
+       const commentsKey = computeKey({ query: payload.query, threads: threadsToUse.map(t => t.id || t.url) });
+       if ((commentsJobState === 'running' || commentsJobState === 'completed') && commentsLastKey === commentsKey) {
+         modalCurrent = 'comments';
+         openModalWith('comments-section', 'User comments');
+         return;
+       }
        if (threadsToUse.length === 0) { el('comments-status').textContent = 'Select threads or run extraction first'; el('comments-status').className = 'status error'; return; }
        modalCurrent = 'comments';
        openModalWith('comments-section', 'User comments');
        el('comments-loader').style.display = 'inline';
        if (modalLoader) modalLoader.style.display = 'inline';
        try {
+         commentsJobState = 'running';
+         commentsLastKey = commentsKey;
          const res = await fetch('/api/comments/start', { 
            method: 'POST', 
            headers: { 'Content-Type': 'application/json' }, 
@@ -568,8 +591,8 @@
          });
          sseComments.addEventListener('threadNoMatches', (ev) => { const d = JSON.parse(ev.data); markThreadNote(d.threadUrl, 'No matches'); });
          sseComments.addEventListener('progress', (ev) => { const p = JSON.parse(ev.data); const txt = `Threads processed: ${p.threadIndex || 0} | Relevant: ${p.totalRelevant || 0}`; el('comments-progress').textContent = txt; if (modalCurrent === 'comments' && modalProgress) modalProgress.textContent = txt; });
-         sseComments.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; if (modalCurrent === 'comments' && modalStatus) modalStatus.textContent = msg; sseComments.close(); el('comments-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; });
-         sseComments.addEventListener('done', () => { el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; if (modalCurrent === 'comments' && modalStatus) modalStatus.textContent = 'Completed'; sseComments.close(); el('comments-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; setLastRun('comments', `${el('comments-body').children.length} added`); });
+         sseComments.addEventListener('error', (ev) => { const msg = JSON.parse(ev.data).message; commentsJobState = 'error'; el('comments-status').textContent = msg; el('comments-status').className = 'status error'; if (modalCurrent === 'comments' && modalStatus) modalStatus.textContent = msg; sseComments.close(); el('comments-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; });
+         sseComments.addEventListener('done', () => { commentsJobState = 'completed'; el('comments-status').textContent = 'Completed'; el('comments-status').className = 'status'; if (modalCurrent === 'comments' && modalStatus) modalStatus.textContent = 'Completed'; sseComments.close(); el('comments-loader').style.display = 'none'; if (modalLoader) modalLoader.style.display = 'none'; setLastRun('comments', `${el('comments-body').children.length} added`); });
        } catch (e) { el('comments-status').textContent = e.message; el('comments-status').className = 'status error'; el('comments-loader').style.display = 'none'; el('btn-stop-comments').classList.add('ghost'); }
      }
 
