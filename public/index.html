@@ -105,6 +105,9 @@
         }
         /* Hide filters panel in sidebar until opened in modal */
         #filters-section { display: none !important; }
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay[hidden] { display: none !important; }
     </style>
  </head>
  <body>
@@ -197,7 +200,7 @@
          </table>
        </div>
      </main>
-     <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+     <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
        <div class="modal" id="modal-root" role="document">
          <div class="modal-header">
            <h2 id="modal-title" style="margin:0;">Results</h2>
