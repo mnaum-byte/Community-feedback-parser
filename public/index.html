@@ -91,6 +91,9 @@
         .modal-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom:1px solid var(--border); }
         .modal-body { flex: 1 1 auto; padding: 12px 16px; overflow: auto; }
         .modal-close { border:1px solid var(--border); background: transparent; color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+        .modal-footer { display:flex; justify-content:flex-end; gap:8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+        .modal.compact { width: min(720px, 92vw); height: auto; max-height: 80vh; }
+        .modal.compact .modal-body { flex: 0 0 auto; }
         /* Why chips */
         .why { display:flex; flex-wrap: wrap; gap:6px; }
         .why .chip { border-color: var(--why-border); background: var(--why-bg); color: var(--muted); }
@@ -123,7 +126,6 @@
    <div class="app">
      <aside class="sidebar" id="sidebar-panel">
        <div id="filters-section" class="panel filters">
-         <h2>Search topics</h2>
          <div>
            <label>Optional keywords (comma separated)</label>
            <input id="optionalKeywords" placeholder="e.g. pdf, export, caption" />
@@ -207,19 +209,22 @@
        </div>
      </main>
      <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
-       <div class="modal" role="document">
+       <div class="modal" id="modal-root" role="document">
          <div class="modal-header">
-          <h2 id="modal-title" style="margin:0;">Results</h2>
-          <div class="toolbar" id="modal-progress-wrap">
-            <span id="modal-progress" class="progress"></span>
-            <span id="modal-status" class="status"></span>
-            <span id="modal-loader" class="loader">⏳</span>
-          </div>
-          <button id="modal-close" class="modal-close">Close</button>
+           <h2 id="modal-title" style="margin:0;">Results</h2>
+           <div class="toolbar" id="modal-progress-wrap">
+             <span id="modal-progress" class="progress"></span>
+             <span id="modal-status" class="status"></span>
+             <span id="modal-loader" class="loader">⏳</span>
+           </div>
+           <button id="modal-close" class="modal-close">Close</button>
+         </div>
+         <div id="modal-body" class="modal-body"></div>
+         <div id="modal-footer" class="modal-footer" style="display:none;">
+          <button id="btn-save-filters">Save</button>
         </div>
-        <div id="modal-body" class="modal-body"></div>
-      </div>
-    </div>
+       </div>
+     </div>
 
     <div class="container footerbar">
       <span id="env-chip" class="chip">env</span>
@@ -636,6 +641,9 @@
       const modalProgress = document.getElementById('modal-progress');
       const modalStatus = document.getElementById('modal-status');
       const modalLoader = document.getElementById('modal-loader');
+      const modalRoot = document.getElementById('modal-root');
+      const modalFooter = document.getElementById('modal-footer');
+      const btnSaveFilters = document.getElementById('btn-save-filters');
       let modalCurrent = null; // 'threads' | 'comments' | null
       const btnConfigureFilters = document.getElementById('btn-configure-filters');
 
@@ -643,9 +651,26 @@
         const section = document.getElementById(sectionId);
         if (!section) return;
         modalTitle.textContent = title;
-        // Move section into modal body
-        modalBody.innerHTML = '';
-        modalBody.appendChild(section);
+        // Configure modal type
+        if (sectionId === 'filters-section') {
+          modalCurrent = 'filters';
+          modalProgress.textContent = '';
+          modalStatus.textContent = '';
+          modalLoader.style.display = 'none';
+          if (modalRoot) modalRoot.classList.add('compact');
+          if (modalFooter) modalFooter.style.display = 'flex';
+          // Move children of filters-section, not the container itself
+          modalBody.innerHTML = '';
+          const frag = document.createDocumentFragment();
+          Array.from(section.children).forEach(child => frag.appendChild(child));
+          modalBody.appendChild(frag);
+        } else {
+          if (modalRoot) modalRoot.classList.remove('compact');
+          if (modalFooter) modalFooter.style.display = 'none';
+          // Move whole section
+          modalBody.innerHTML = '';
+          modalBody.appendChild(section);
+        }
         modalOverlay.style.display = 'flex';
         modalOverlay.setAttribute('aria-hidden', 'false');
       }
@@ -653,14 +678,17 @@
         // Move sections back to hidden content container
         const content = document.querySelector('main.content');
         const sidebar = document.getElementById('sidebar-panel');
-        if (content && document.getElementById('threads-section') && !content.contains(document.getElementById('threads-section'))) {
-          content.appendChild(document.getElementById('threads-section'));
-        }
-        if (content && document.getElementById('comments-section') && !content.contains(document.getElementById('comments-section'))) {
-          content.appendChild(document.getElementById('comments-section'));
-        }
-        if (sidebar && document.getElementById('filters-section') && !sidebar.contains(document.getElementById('filters-section'))) {
-          sidebar.insertBefore(document.getElementById('filters-section'), sidebar.querySelector('.extract-controls'));
+        const threadsSec = document.getElementById('threads-section');
+        const commentsSec = document.getElementById('comments-section');
+        const filtersSec = document.getElementById('filters-section');
+        if (content && threadsSec && !content.contains(threadsSec)) content.appendChild(threadsSec);
+        if (content && commentsSec && !content.contains(commentsSec)) content.appendChild(commentsSec);
+        if (sidebar && filtersSec && modalCurrent === 'filters') {
+          // Move modal body children back into filters-section before the extract controls
+          const beforeNode = sidebar.querySelector('.extract-controls');
+          while (modalBody.firstChild) {
+            filtersSec.insertBefore(modalBody.firstChild, beforeNode);
+          }
         }
         modalOverlay.style.display = 'none';
         modalOverlay.setAttribute('aria-hidden', 'true');
@@ -669,9 +697,10 @@
         if (modalStatus) modalStatus.textContent = '';
         if (modalLoader) modalLoader.style.display = 'none';
       }
-      if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', () => { modalCurrent = 'filters'; openModalWith('filters-section', 'Configure search filters'); });
+      if (btnConfigureFilters) btnConfigureFilters.addEventListener('click', () => { openModalWith('filters-section', 'Configure search filters'); });
       if (modalClose) modalClose.addEventListener('click', closeModal);
       modalOverlay?.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeModal(); });
+      if (btnSaveFilters) btnSaveFilters.addEventListener('click', () => { try { saveFilters(); } catch(_) {} closeModal(); });
 
       el('btn-export-threads-csv').addEventListener('click', exportThreadsCSV);
       el('btn-export-threads-xlsx').addEventListener('click', exportThreadsXLSX);
