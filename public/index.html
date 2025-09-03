@@ -124,10 +124,10 @@
         .modal.compact .modal-body { flex: 0 0 auto; padding: 16px; }
         /* md-dialog sizing per M3 patterns */
         md-dialog::part(container) { background: var(--panel); border: 1px solid var(--border); }
-        /* Medium container for filters */
-        md-dialog.medium::part(container) { width: min(560px, 92vw); max-height: 80vh; }
-        /* Full-screen container for results */
-        md-dialog.full::part(container) { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; }
+        /* Medium (wider) container for filters */
+        md-dialog.medium::part(container) { width: min(800px, 96vw); max-height: 82vh; }
+        /* Wide container for results */
+        md-dialog.wide::part(container) { width: min(1280px, 96vw); height: 90vh; max-height: 90vh; }
         .chipset { display:flex; gap:6px; flex-wrap: wrap; margin-top: 6px; }
         .chipset .chip { border-color: var(--border); }
     </style>
@@ -189,7 +189,7 @@
     </aside>
 
     <main class="content" style="display:none;">
-      <div id="threads-section" class="section panel" aria-label="Relevant threads results">
+      <div id="threads-section" class="section panel" aria-label="Relevant threads results" style="min-height:70vh;">
         <div class="toolbar" style="justify-content: space-between;">
           <h2>Relevant Threads <span id="selected-count" class="hint"></span></h2>
           <div class="toolbar">
@@ -207,7 +207,7 @@
         </table>
       </div>
 
-      <div id="comments-section" class="section panel" aria-label="Matching comments results">
+      <div id="comments-section" class="section panel" aria-label="Matching comments results" style="min-height:70vh;">
         <div class="toolbar" style="justify-content: space-between;">
           <h2>User comments</h2>
           <div class="toolbar">
@@ -441,6 +441,7 @@
       modalTitle.textContent = title;
       if (sectionId === 'filters-section') {
         mdDialog?.classList.remove('full');
+        mdDialog?.classList.remove('wide');
         mdDialog?.classList.add('medium');
         modalCurrent = 'filters';
         if (modalRoot) modalRoot.classList.add('compact');
@@ -461,7 +462,7 @@
         const ferr = document.getElementById('filters-error'); if (ferr) ferr.textContent = '';
       } else {
         mdDialog?.classList.remove('medium');
-        mdDialog?.classList.add('full');
+        mdDialog?.classList.add('wide');
         modalCurrent = sectionId === 'threads-section' ? 'threads' : 'comments';
         if (modalRoot) modalRoot.classList.remove('compact');
         if (modalFooter) modalFooter.style.display = 'none';
