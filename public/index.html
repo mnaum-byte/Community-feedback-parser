@@ -157,7 +157,6 @@
         <div class="toolbar">
           <button id="btn-configure-filters">Set search criteria</button>
         </div>
-        <div id="filters-summary" class="chipset" aria-live="polite"></div>
         <div class="toolbar">
           <button id="btn-parse">Find relevant threads</button>
           <span id="parse-progress" class="progress"></span>
@@ -185,6 +184,7 @@
             <button id="btn-export-threads-xlsx" class="secondary">Export XLSX</button>
           </div>
         </div>
+        <div id="filters-summary-threads" class="chipset" aria-live="polite"></div>
         <table>
           <caption class="sr-only">Relevant threads table</caption>
           <thead>
@@ -206,6 +206,7 @@
             <button id="btn-export-selected-xlsx" class="secondary" disabled>Export selected XLSX</button>
           </div>
         </div>
+        <div id="filters-summary-comments" class="chipset" aria-live="polite"></div>
         <table>
           <caption class="sr-only">Matching comments table</caption>
           <thead>
@@ -350,18 +351,21 @@
     function computeKey(obj) { try { return JSON.stringify(obj); } catch(_) { return String(obj); } }
 
     function updateFiltersSummary() {
-      const wrap = el('filters-summary'); if (!wrap) return;
+      const wrapThreads = el('filters-summary-threads');
+      const wrapComments = el('filters-summary-comments');
+      if (!wrapThreads && !wrapComments) return;
       const must = csvToArray(el('mustKeywords').value);
       const opt = csvToArray(el('optionalKeywords').value);
       const exc = csvToArray(el('excludeKeywords').value);
       const feat = (el('featureDef').value || '').trim();
-      wrap.innerHTML = '';
+      [wrapThreads, wrapComments].forEach(wrap=>{ if (!wrap) return; wrap.innerHTML = ''; });
       const mk = (label, arrOrStr) => {
         const val = Array.isArray(arrOrStr) ? arrOrStr.join(', ') : arrOrStr;
         if (!val) return null;
         const span = document.createElement('span'); span.className = 'chip'; span.textContent = label + ': ' + val; return span;
       };
-      [mk('Must', must), mk('Optional', opt), mk('Exclude', exc), mk('Feature', feat)].forEach(x => x && wrap.appendChild(x));
+      const chips = [mk('Must', must), mk('Optional', opt), mk('Exclude', exc), mk('Feature', feat)].filter(Boolean);
+      [wrapThreads, wrapComments].forEach(wrap=>{ if (!wrap) return; chips.forEach(x => wrap.appendChild(x.cloneNode(true))); });
     }
 
     function hasSearchCriteria(){
